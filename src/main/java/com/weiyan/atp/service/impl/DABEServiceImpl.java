@@ -36,6 +36,7 @@ import java.util.Collections;
 
 import javax.validation.constraints.NotEmpty;
 import com.alibaba.fastjson.JSONObject;
+//import sun.security.util.Debug;
 
 
 /**
@@ -132,7 +133,7 @@ public class DABEServiceImpl implements DABEService {
     public DABEUser createUser(@NotEmpty String fileName, @NotEmpty String userName) {
         ChaincodeResponse response = chaincodeService.query(
                 ChaincodeTypeEnum.DABE, "/user/create", new ArrayList<>(Collections.singletonList(userName)));
-//        CCUtils.saveResponse2(certPath, fileName, response);
+        CCUtils.saveResponse2(certPath, fileName, response);
         return CCUtils.saveResponse(userPath, fileName, response);
     }
 
@@ -140,7 +141,7 @@ public class DABEServiceImpl implements DABEService {
     public DABEUser createUser(@NotEmpty String fileName, @NotEmpty String userName, @NotEmpty String userType, @NotEmpty String channel, @NotEmpty String password) {
         ChaincodeResponse response = chaincodeService.query(
                 ChaincodeTypeEnum.DABE, "/user/create", new ArrayList<>(Collections.singletonList(userName)));
-//        CCUtils.saveResponse2(certPath, fileName, response);
+        CCUtils.saveResponse2(certPath, fileName, response);
         return CCUtils.saveResponse(userPath, fileName, userType, channel, password, false, response);
     }
 
