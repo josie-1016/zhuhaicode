@@ -1,0 +1,10 @@
+-------------------------------------------------------------------------------
+Test set: com.weiyan.atp.utils.SecurityUtilsTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 75.6 s <<< FAILURE! - in com.weiyan.atp.utils.SecurityUtilsTest
+testRequest  Time elapsed: 75.151 s  <<< ERROR!
+org.apache.http.conn.HttpHostConnectException: Connect to 10.176.40.46:80 [/10.176.40.46] failed: Operation timed out (Connection timed out)
+	at com.weiyan.atp.utils.SecurityUtilsTest.testRequest(SecurityUtilsTest.java:78)
+Caused by: java.net.ConnectException: Operation timed out (Connection timed out)
+	at com.weiyan.atp.utils.SecurityUtilsTest.testRequest(SecurityUtilsTest.java:78)
+
