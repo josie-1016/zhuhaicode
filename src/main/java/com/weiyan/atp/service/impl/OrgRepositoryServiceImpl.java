@@ -588,6 +588,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
         if (response.isFailed()) {
             throw new BaseException("query cc error: " + response.getMessage());
         }
+        System.out.println(response.getMessage());
         return JsonProviderHolder.JACKSON.parse(response.getMessage(), PlatOrgApply.class);
     }
 }

@@ -1,19 +1,15 @@
 package com.weiyan.atp.utils;
 
-import com.weiyan.atp.data.bean.DABEUser;
 import com.weiyan.atp.data.bean.PrivateKey;
 import com.weiyan.atp.data.bean.PublicKey;
 import com.weiyan.atp.data.bean.SignaTure;
 import com.weiyan.atp.data.response.web.SM2KeysResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
 import org.bouncycastle.math.ec.ECPoint;
 
 import javax.validation.constraints.NotEmpty;
-import java.io.File;
-import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 /**
  * 使用SM2实现交易签名
@@ -85,5 +81,14 @@ public class SM2Utils {
                 return false;
         };
 
+        public static String Encrypt(String pub, String data){
+                // 获得公钥
+                PublicKey publ=JsonProviderHolder.JACKSON.parse(pub,PublicKey.class);
+                ECPoint publicKey= sm02.getPoint(publ.getX(),publ.getY());
+                // 加密数据
+                byte[] cipher=sm02.encrypt(data,publicKey);
+                String c= Base64.getEncoder().encodeToString(cipher);
+                return c;
+        }
 
 }
