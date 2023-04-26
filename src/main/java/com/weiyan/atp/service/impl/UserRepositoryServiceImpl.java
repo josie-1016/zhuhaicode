@@ -108,7 +108,7 @@ public class UserRepositoryServiceImpl implements UserRepositoryService {
 //                ChaincodeTypeEnum.TRUST_PLATFORM, "/user/create", ccRequest);
         try {
             CommonController cc = new CommonController();
-            cc.generateRsaKeysFile(user.getName());
+            cc.generateRsaKeysFile(user.getName()); //生成公私钥并保存
             String priKey = FileUtils.readFileToString(new File(priKeyPath + userName),
                     StandardCharsets.UTF_8);
             String pubKey = FileUtils.readFileToString(new File(pubKeyPath + userName),

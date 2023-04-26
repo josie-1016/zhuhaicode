@@ -9,7 +9,8 @@ import lombok.Getter;
 @Getter
 public enum ChaincodeTypeEnum {
     DABE("dabe"),
-    TRUST_PLATFORM("plat");
+    TRUST_PLATFORM("plat"),
+    BP("bp");
 
     private String ccName;
 
