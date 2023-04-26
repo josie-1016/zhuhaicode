@@ -1,12 +1,15 @@
 package com.weiyan.atp.utils;
 
 import com.weiyan.atp.constant.BaseException;
+import com.weiyan.atp.data.bean.BulletProof;
 import com.weiyan.atp.data.bean.ChaincodeResponse;
 import com.weiyan.atp.data.bean.ChaincodeResponse.Status;
+import com.weiyan.atp.data.bean.Commit;
 import com.weiyan.atp.data.bean.DABEUser;
 import com.weiyan.atp.data.bean.intergration.Cert;
 import com.weiyan.atp.data.request.chaincode.plat.BaseCCRequest;
 
+import com.weiyan.atp.data.response.chaincode.plat.BPResponse;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.io.FileUtils;
@@ -137,6 +140,36 @@ public class CCUtils {
             String resource = JsonProviderHolder.JACKSON.toJsonString(newUser);
             saveDABEUser(filePath, resource);
             return newUser;
+        } catch (Exception e) {
+            log.warn("create user error", e);
+            return null;
+        }
+    }
+
+    public static void saveValue(String valuePath, String username, String fileName, String value, String open) {
+        String filePath = valuePath + username +"/"+ fileName;
+        try {
+            File file = new File(filePath);
+            FileUtils.touch(file);
+            String resource = value +","+ open;
+            IOUtils.write(resource, new FileOutputStream(file), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new BaseException("io error for " + filePath);
+        }
+    }
+
+    public static BulletProof saveProof(String proofPath, String username, String fileName, BulletProof proof) {
+        try {
+            String filePath = proofPath + username +"/"+ fileName;
+            String resource = JsonProviderHolder.JACKSON.toJsonString(proof);
+            try {
+                File file = new File(filePath);
+                FileUtils.touch(file);
+                IOUtils.write(resource, new FileOutputStream(file), StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                throw new BaseException("io error for " + filePath);
+            }
+            return proof;
         } catch (Exception e) {
             log.warn("create user error", e);
             return null;
