@@ -29,18 +29,6 @@ public class BulletProofController {
         this.bulletProofService = bulletProofService;
     }
 
-//    @PostMapping("/commit")
-//    public Result<Object> commit(@RequestBody @Validated CreateBulletProofRequest request) {
-//        int tagSize = request.getDataTags().size();
-//        if (tagSize == 0 || tagSize > 10) {
-//            return Result.internalError("tags length error");
-//        }
-//        ChaincodeResponse response = bulletProofService.createBulletProof(request);
-////        BulletProof bulletProof = bpService.createBulletProof(request.getValue(), request.getRange());
-////
-////        ChaincodeResponse response2 = bulletProofService.createBulletProof(request.getUserName(), request.getUserType(), bulletProof);
-//        return Result.okWithData(response.getResult(str->str));
-//    }
 
     @PostMapping("/create")
     public Result<Object> createZK(@ModelAttribute @Validated CreateBulletProofRequest request) {
@@ -51,9 +39,6 @@ public class BulletProofController {
             }
         }
         ChaincodeResponse response = bulletProofService.createBulletProof(request);
-//        BulletProof bulletProof = bpService.createBulletProof(request.getValue(), request.getRange());
-//
-//        ChaincodeResponse response2 = bulletProofService.createBulletProof(request.getUserName(), request.getUserType(), bulletProof);
         return Result.okWithData(response.getResult(str->str));
     }
 

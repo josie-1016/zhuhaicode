@@ -38,7 +38,8 @@ public class ProofContent {
     private String commit1;
     private String commit2;
     private String open;
-    private String timeStamp;
+    private String timeStamp1;
+    private String timeStamp2;
 //    private BulletProof bulletProof;
 
     public ProofContent(ProofResponse response) {
@@ -51,7 +52,8 @@ public class ProofContent {
         this.commit1 = JsonProviderHolder.JACKSON.toJsonString(response.getCommit1());
         this.commit2 = JsonProviderHolder.JACKSON.toJsonString(response.getCommit2());
         this.open = response.getOpen();
-        this.timeStamp = response.getTimestamp();
+        this.timeStamp1 = response.getTimestamp1();
+        this.timeStamp2 = response.getTimestamp2();
 //        if(!Objects.equals(response.getProofFileName(), "")) {
 //            try {
 //                String b = FileUtils.readFileToString(
