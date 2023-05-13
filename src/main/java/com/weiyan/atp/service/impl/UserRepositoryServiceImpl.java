@@ -17,7 +17,6 @@ import com.weiyan.atp.service.UserRepositoryService;
 import com.weiyan.atp.utils.CCUtils;
 import com.weiyan.atp.utils.JsonProviderHolder;
 import com.weiyan.atp.app.controller.CommonController;
-
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.io.FileUtils;
@@ -61,11 +60,9 @@ public class UserRepositoryServiceImpl implements UserRepositoryService {
         Preconditions.checkNotNull(user.getEggAlpha());
         try {
             CommonController cc = new CommonController();
-            cc.generateRsaKeysFile(user.getName());
-            String priKey = FileUtils.readFileToString(new File(priKeyPath + request.getFileName()),
-                StandardCharsets.UTF_8);
+            cc.generateSM2KeysFile(user.getName());
             String pubKey = FileUtils.readFileToString(new File(pubKeyPath + request.getFileName()),
-                StandardCharsets.UTF_8);
+                    StandardCharsets.UTF_8);
 
             CreateUserCCRequest ccRequest =
                 CreateUserCCRequest.builder()
@@ -74,7 +71,7 @@ public class UserRepositoryServiceImpl implements UserRepositoryService {
                     .upk(user.getEggAlpha())
                     .userType(request.getUserType())
                     .build();
-            CCUtils.sign(ccRequest, priKey);
+            CCUtils.SM2sign(ccRequest,request.getFileName(),user.getName());
             return chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/user/create", ccRequest);
         } catch (IOException e) {
@@ -108,9 +105,7 @@ public class UserRepositoryServiceImpl implements UserRepositoryService {
 //                ChaincodeTypeEnum.TRUST_PLATFORM, "/user/create", ccRequest);
         try {
             CommonController cc = new CommonController();
-            cc.generateRsaKeysFile(user.getName()); //生成公私钥并保存
-            String priKey = FileUtils.readFileToString(new File(priKeyPath + userName),
-                    StandardCharsets.UTF_8);
+            cc.generateSM2KeysFile(user.getName());
             String pubKey = FileUtils.readFileToString(new File(pubKeyPath + userName),
                     StandardCharsets.UTF_8);
 
@@ -121,7 +116,7 @@ public class UserRepositoryServiceImpl implements UserRepositoryService {
                             .upk(user.getEggAlpha())
                             .userType(userType)
                             .build();
-            CCUtils.sign(ccRequest, priKey);
+            CCUtils.SM2sign(ccRequest,userName,user.getName());
             return chaincodeService.invoke(
                     ChaincodeTypeEnum.TRUST_PLATFORM, "/user/create", ccRequest);
         } catch (IOException e) {
@@ -142,6 +137,7 @@ public class UserRepositoryServiceImpl implements UserRepositoryService {
         if (response.isFailed()) {
             throw new BaseException("no user for request: " + request.getUserName() + request.getPubKey());
         }
+        System.out.println(response.getMessage());
         return JsonProviderHolder.JACKSON.parse(response.getMessage(), PlatUser.class);
     }
 }

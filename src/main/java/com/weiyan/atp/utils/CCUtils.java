@@ -4,19 +4,18 @@ import com.weiyan.atp.constant.BaseException;
 import com.weiyan.atp.data.bean.BulletProof;
 import com.weiyan.atp.data.bean.ChaincodeResponse;
 import com.weiyan.atp.data.bean.ChaincodeResponse.Status;
-import com.weiyan.atp.data.bean.Commit;
+
+import com.weiyan.atp.app.controller.CommonController;
+
 import com.weiyan.atp.data.bean.DABEUser;
 import com.weiyan.atp.data.bean.intergration.Cert;
 import com.weiyan.atp.data.request.chaincode.plat.BaseCCRequest;
-
-import com.weiyan.atp.data.response.chaincode.plat.BPResponse;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.encoders.Base64;
-import org.springframework.boot.configurationprocessor.json.JSONObject;
 
 import java.io.*;
 import java.net.URL;
@@ -46,6 +45,30 @@ public class CCUtils {
     private CCUtils() {
     }
     private static final String HEX = "0123456789abcdef";
+
+    private static final String priKeyPath="atp/priKey/";
+    private static final String pubKeyPath="atp/pubKey/";
+
+    public static <T extends BaseCCRequest> void SM2sign(T ccRequest,String FileName,String userName){
+        try {
+            CommonController cc = new CommonController();
+            String priKey = FileUtils.readFileToString(
+                    new File(priKeyPath + FileName),
+                    StandardCharsets.UTF_8);
+            String pubKey = FileUtils.readFileToString(new File(pubKeyPath + FileName),
+                    StandardCharsets.UTF_8);
+            String args=JsonProviderHolder.JACKSON.toJsonString(ccRequest); // 得到RequestParamJson
+            String sign=cc.generateSign(priKey,pubKey,userName,args); // 得到签名
+            ccRequest.setSign(sign); // 保存签名
+
+            // 验签
+            if(!cc.getVerify(ccRequest.getUid(), pubKey,ccRequest.getSign(),args)) {
+                throw new BaseException("getVerify error");
+            }
+        } catch (IOException e) {
+            throw new BaseException("io error:" + e.getMessage());
+        }
+    }
 
     public static <T extends BaseCCRequest> void sign(T t, String priKey) {
         try {

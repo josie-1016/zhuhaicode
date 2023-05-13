@@ -74,6 +74,7 @@ public class EncryptContentCCRequest {
         while (matcher.find()) {
             attrNames.add(matcher.group());
         }
+        System.out.println(attrNames);
         Map<String, String> attr2UserOrOrg = attrNames.stream()
             .collect(Collectors.toMap(
                 attrName -> attrName,
@@ -84,6 +85,7 @@ public class EncryptContentCCRequest {
             .collect(Collectors.toMap(name -> name,
                 name -> {
                     try {
+                        System.out.println(name);
                         PlatUser platUser = userService.queryUser(
                             QueryUserRequest.builder().userName(name).build());
                         if (StringUtils.isNotEmpty(platUser.getUid())) {

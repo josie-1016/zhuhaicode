@@ -1,7 +1,6 @@
 package com.weiyan.atp.service.impl;
 
 import com.google.common.base.Preconditions;
-
 import com.weiyan.atp.constant.AttrApplyStatusEnum;
 import com.weiyan.atp.constant.BaseException;
 import com.weiyan.atp.constant.ChaincodeTypeEnum;
@@ -81,25 +80,17 @@ public class AttrServiceImpl implements AttrService {
         Preconditions.checkNotNull(user, NO_USER_ERROR + request.getFileName());
         Preconditions.checkNotNull(user.getName());
         Preconditions.checkNotNull(user.getApkMap().get(request.getAttrName()), "no attr");
-
-        try {
-            String priKey = FileUtils.readFileToString(
-                new File(priKeyPath + request.getFileName()),
-                StandardCharsets.UTF_8);
-            DeclareUserAttrCCRequest ccRequest =
-                DeclareUserAttrCCRequest.builder()
-                    .uid(user.getName())
-                    .attrName(request.getAttrName().startsWith(user.getName())
-                        ? request.getAttrName()
-                        : user.getName() + ":" + request.getAttrName())
-                    .apk(user.getApkMap().get(request.getAttrName()).getGy())
-                    .build();
-            CCUtils.sign(ccRequest, priKey);
-            return chaincodeService.invoke(
-                ChaincodeTypeEnum.TRUST_PLATFORM, "/user/declareAttr", ccRequest);
-        } catch (IOException e) {
-            throw new BaseException(e.getMessage());
-        }
+        DeclareUserAttrCCRequest ccRequest =
+            DeclareUserAttrCCRequest.builder()
+                .uid(user.getName())
+                .attrName(request.getAttrName().startsWith(user.getName())
+                    ? request.getAttrName()
+                    : user.getName() + ":" + request.getAttrName())
+                .apk(user.getApkMap().get(request.getAttrName()).getGy())
+                .build();
+        CCUtils.SM2sign(ccRequest,request.getFileName(),user.getName());
+        return chaincodeService.invoke(
+            ChaincodeTypeEnum.TRUST_PLATFORM, "/user/declareAttr", ccRequest);
     }
 
     @Override
@@ -107,26 +98,19 @@ public class AttrServiceImpl implements AttrService {
         DABEUser user = dabeService.getUser(request.getFileName());
         Preconditions.checkNotNull(user, NO_USER_ERROR + request.getFileName());
         Preconditions.checkNotNull(user.getName());
-        System.out.println("uuuuuuuuuuuuuuuu");
         System.out.println(user.toString());
         Preconditions.checkNotNull(user.getApkMap().get(request.getAttrName()), "no attr");
-        try{
-        String priKey = FileUtils.readFileToString(new File(priKeyPath + request.getFileName()),
-                StandardCharsets.UTF_8);
         DeclareUserAttrCCRequest ccRequest =
-                DeclareUserAttrCCRequest.builder()
-                        .uid(user.getName())
-                        .attrName(request.getAttrName().startsWith(user.getName())
-                                ? request.getAttrName()
-                                : user.getName() + ":" + request.getAttrName())
-                        .apk(user.getApkMap().get(request.getAttrName()).getGy())
-                        .build();
-        CCUtils.sign(ccRequest, priKey);
+            DeclareUserAttrCCRequest.builder()
+                    .uid(user.getName())
+                    .attrName(request.getAttrName().startsWith(user.getName())
+                            ? request.getAttrName()
+                            : user.getName() + ":" + request.getAttrName())
+                    .apk(user.getApkMap().get(request.getAttrName()).getGy())
+                    .build();
+        CCUtils.SM2sign(ccRequest,request.getFileName(),user.getName());
         return chaincodeService.invoke(
-                ChaincodeTypeEnum.TRUST_PLATFORM, "/user/declareAttr", ccRequest);
-        } catch (IOException e) {
-            throw new BaseException(e.getMessage());
-        }
+            ChaincodeTypeEnum.TRUST_PLATFORM, "/user/declareAttr", ccRequest);
     }
 
     @Override
@@ -157,25 +141,17 @@ public class AttrServiceImpl implements AttrService {
         DABEUser user = dabeService.getUser(request.getFileName());
         Preconditions.checkNotNull(user, NO_USER_ERROR + request.getFileName());
         Preconditions.checkNotNull(user.getName());
-
-        try {
-            String priKey = FileUtils.readFileToString(
-                new File(priKeyPath + request.getFileName()),
-                StandardCharsets.UTF_8);
-            ApplyUserAttrCCRequest ccRequest = ApplyUserAttrCCRequest.builder()
-                .uid(user.getName())
-                .toUid(request.getToUserName())
-                .toOrgId(request.getToOrgName())
-                .isPublic(request.getIsPublic())
-                .attrName(request.getAttrName())
-                .remark(request.getRemark())
-                .build();
-            CCUtils.sign(ccRequest, priKey);
-            return chaincodeService.invoke(
-                ChaincodeTypeEnum.TRUST_PLATFORM, "/user/applyAttr", ccRequest);
-        } catch (IOException e) {
-            throw new BaseException(e.getMessage());
-        }
+        ApplyUserAttrCCRequest ccRequest = ApplyUserAttrCCRequest.builder()
+            .uid(user.getName())
+            .toUid(request.getToUserName())
+            .toOrgId(request.getToOrgName())
+            .isPublic(request.getIsPublic())
+            .attrName(request.getAttrName())
+            .remark(request.getRemark())
+            .build();
+        CCUtils.SM2sign(ccRequest,request.getFileName(),user.getName());
+        return chaincodeService.invoke(
+            ChaincodeTypeEnum.TRUST_PLATFORM, "/user/applyAttr", ccRequest);
     }
 
     @Override
@@ -197,24 +173,18 @@ public class AttrServiceImpl implements AttrService {
 //        System.out.println(ccRequest.toString());
 //        return chaincodeService.invoke(
 //                ChaincodeTypeEnum.TRUST_PLATFORM, "/user/applyAttr", ccRequest);
-        try {
-            String priKey = FileUtils.readFileToString(
-                    new File(priKeyPath + request.getFileName()),
-                    StandardCharsets.UTF_8);
-            ApplyUserAttrCCRequest ccRequest = ApplyUserAttrCCRequest.builder()
-                    .uid(user.getName())
-                    .toUid(request.getToUserName())
-                    .toOrgId(request.getToOrgName())
-                    .isPublic(request.getIsPublic())
-                    .attrName(request.getAttrName())
-                    .remark(request.getRemark())
-                    .build();
-            CCUtils.sign(ccRequest, priKey);
-            return chaincodeService.invoke(
-                    ChaincodeTypeEnum.TRUST_PLATFORM, "/user/applyAttr", ccRequest);
-        } catch (IOException e) {
-            throw new BaseException(e.getMessage());
-        }
+
+        ApplyUserAttrCCRequest ccRequest = ApplyUserAttrCCRequest.builder()
+                .uid(user.getName())
+                .toUid(request.getToUserName())
+                .toOrgId(request.getToOrgName())
+                .isPublic(request.getIsPublic())
+                .attrName(request.getAttrName())
+                .remark(request.getRemark())
+                .build();
+        CCUtils.SM2sign(ccRequest,request.getFileName(),user.getName());
+        return chaincodeService.invoke(
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/user/applyAttr", ccRequest);
     }
 
     //撤销他人属性
@@ -229,11 +199,6 @@ public class AttrServiceImpl implements AttrService {
         Preconditions.checkNotNull(user2, NO_USER_ERROR + request.getToUserName());
         Preconditions.checkNotNull(user2.getName());
         Preconditions.checkNotNull(user2.getAppliedAttrMap().get(request.getAttrName()), "no attr");
-
-        user2.deleteAttr(request.getAttrName());
-
-        CCUtils.saveDABEUser(userPath + user2.getName(),
-                JsonProviderHolder.JACKSON.toJsonString(user2));
 
         RevokeUserAttrCCRequest ccRequest = RevokeUserAttrCCRequest.builder()
                 .uid(user1.getName())
@@ -250,25 +215,17 @@ public class AttrServiceImpl implements AttrService {
         DABEUser user = dabeService.getUser(request.getFileName());
         Preconditions.checkNotNull(user, NO_USER_ERROR + request.getFileName());
         Preconditions.checkNotNull(user.getName());
-
-        try {
-            String priKey = FileUtils.readFileToString(
-                    new File(priKeyPath + request.getFileName()),
-                    StandardCharsets.UTF_8);
-            ApplyUserAttrCCRequest ccRequest = ApplyUserAttrCCRequest.builder()
-                    .uid(user.getName())
-                    .toUid(request.getToUserName())
-                    .toOrgId(request.getToOrgName())
-                    .isPublic(request.getIsPublic())
-                    .attrName(request.getAttrName())
-                    .remark(request.getRemark())
-                    .build();
-            CCUtils.sign(ccRequest, priKey);
-            return chaincodeService.invoke(
-                    ChaincodeTypeEnum.TRUST_PLATFORM, "/user/batchApplyAttr", ccRequest);
-        } catch (IOException e) {
-            throw new BaseException(e.getMessage());
-        }
+        ApplyUserAttrCCRequest ccRequest = ApplyUserAttrCCRequest.builder()
+                .uid(user.getName())
+                .toUid(request.getToUserName())
+                .toOrgId(request.getToOrgName())
+                .isPublic(request.getIsPublic())
+                .attrName(request.getAttrName())
+                .remark(request.getRemark())
+                .build();
+        CCUtils.SM2sign(ccRequest,request.getFileName(),user.getName());
+        return chaincodeService.invoke(
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/user/batchApplyAttr", ccRequest);
     }
 
     /**
@@ -277,8 +234,6 @@ public class AttrServiceImpl implements AttrService {
     @Override
     public ChaincodeResponse queryAttrApply(String toUid, String toOrgId,
                                             String userName, AttrApplyStatusEnum status) {
-        System.out.println("ooooooooooooooooooooooooo");
-        System.out.println(userName);
       //  userName = "深圳市气象局";
       //  status = AttrApplyStatusEnum.PENDING;
         QueryUserAttrApplyCCRequest ccRequest = QueryUserAttrApplyCCRequest.builder()
@@ -311,37 +266,67 @@ public class AttrServiceImpl implements AttrService {
         DABEUser user = dabeService.getUser(request.getFileName());
         Preconditions.checkNotNull(user, NO_USER_ERROR + request.getFileName());
         Preconditions.checkNotNull(user.getName());
+        // 检查属性名是否合法
+        String[] split = StringUtils.split(request.getAttrName(), ":");
+        if (split.length != 2) {
+            throw new BaseException("attrName error");
+        }
 
-        try {
-            // 自己签名私钥
-            String priKey = FileUtils.readFileToString(
-                new File(priKeyPath + request.getFileName()),
-                StandardCharsets.UTF_8);
-
-            // 检查属性名是否合法
-            String[] split = StringUtils.split(request.getAttrName(), ":");
-            if (split.length != 2) {
-                throw new BaseException("attrName error");
+        // 如果同意需要给秘密
+        String secret = null;
+        if (request.getAgree().equals(Boolean.TRUE)) {
+            ChaincodeResponse res1 = dabeService.approveAttrApply(
+                request.getFileName(), request.getAttrName(), request.getToUserName());
+            if (res1.getStatus() == Status.FAIL) {
+                throw new BaseException("get secret failed");
             }
+            PlatUser toUser = userRepositoryService.queryUser(
+                QueryUserRequest.builder().userName(request.getToUserName()).build());
+            secret = new String(Base64.encode(
+                SecurityUtils.encrypt(
+                    SecurityUtils.RSA_PKCS1,
+                    SecurityUtils.from(SecurityUtils.X509, toUser.getPublicKey()),
+                    res1.getMessage().getBytes())));
+        }
 
-            // 如果同意需要给秘密
-            String secret = null;
-            if (request.getAgree().equals(Boolean.TRUE)) {
-                ChaincodeResponse res1 = dabeService.approveAttrApply(
+        ApproveAttrApplyCCRequest ccRequest = ApproveAttrApplyCCRequest.builder()
+            .uid(user.getName())
+            .fromUid(request.getToUserName())
+            .toOrgId(split[0].equals(user.getName()) ? "" : split[0])
+            .attrName(request.getAttrName())
+            .secret(secret)
+            .agree(request.getAgree())
+            .remark(request.getRemark())
+            .build();
+        CCUtils.SM2sign(ccRequest,request.getFileName(),user.getName());
+        return chaincodeService.invoke(
+            ChaincodeTypeEnum.TRUST_PLATFORM, "/user/approveAttrApply", ccRequest);
+    }
+
+    @Override
+    public ChaincodeResponse approveAttrApply2(ApproveAttrApplyRequest request) {
+        DABEUser user = dabeService.getUser(request.getFileName());
+        Preconditions.checkNotNull(user, NO_USER_ERROR + request.getFileName());
+        Preconditions.checkNotNull(user.getName());
+
+        // 检查属性名是否合法
+        String[] split = StringUtils.split(request.getAttrName(), ":");
+        if (split.length != 2) {
+            throw new BaseException("attrName error");
+        }
+
+        // 如果同意需要给秘密
+        String secret = null;
+        if (request.getAgree().equals(Boolean.TRUE)) {
+            ChaincodeResponse res1 = dabeService.approveAttrApply(
                     request.getFileName(), request.getAttrName(), request.getToUserName());
-                if (res1.getStatus() == Status.FAIL) {
-                    throw new BaseException("get secret failed");
-                }
-                PlatUser toUser = userRepositoryService.queryUser(
-                    QueryUserRequest.builder().userName(request.getToUserName()).build());
-                secret = new String(Base64.encode(
-                    SecurityUtils.encrypt(
-                        SecurityUtils.RSA_PKCS1,
-                        SecurityUtils.from(SecurityUtils.X509, toUser.getPublicKey()),
-                        res1.getMessage().getBytes())));
+            if (res1.getStatus() == Status.FAIL) {
+                throw new BaseException("get secret failed");
             }
+            secret = res1.getMessage();
+        }
 
-            ApproveAttrApplyCCRequest ccRequest = ApproveAttrApplyCCRequest.builder()
+        ApproveAttrApplyCCRequest ccRequest = ApproveAttrApplyCCRequest.builder()
                 .uid(user.getName())
                 .fromUid(request.getToUserName())
                 .toOrgId(split[0].equals(user.getName()) ? "" : split[0])
@@ -350,57 +335,9 @@ public class AttrServiceImpl implements AttrService {
                 .agree(request.getAgree())
                 .remark(request.getRemark())
                 .build();
-            CCUtils.sign(ccRequest, priKey);
-            return chaincodeService.invoke(
+        CCUtils.SM2sign(ccRequest,request.getFileName(),user.getName());
+        return chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/user/approveAttrApply", ccRequest);
-        } catch (IOException e) {
-            throw new BaseException(e.getMessage());
-        }
-    }
-
-    @Override
-    public ChaincodeResponse approveAttrApply2(ApproveAttrApplyRequest request) {
-        DABEUser user = dabeService.getUser(request.getFileName());
-        Preconditions.checkNotNull(user, NO_USER_ERROR + request.getFileName());
-        Preconditions.checkNotNull(user.getName());
-        try{
-            String priKey = FileUtils.readFileToString(
-                    new File(priKeyPath + request.getFileName()),
-                    StandardCharsets.UTF_8);
-
-            // 检查属性名是否合法
-            String[] split = StringUtils.split(request.getAttrName(), ":");
-            if (split.length != 2) {
-                throw new BaseException("attrName error");
-            }
-
-            // 如果同意需要给秘密
-            String secret = null;
-            if (request.getAgree().equals(Boolean.TRUE)) {
-                ChaincodeResponse res1 = dabeService.approveAttrApply(
-                        request.getFileName(), request.getAttrName(), request.getToUserName());
-                if (res1.getStatus() == Status.FAIL) {
-                    throw new BaseException("get secret failed");
-                }
-                secret = res1.getMessage();
-            }
-
-            ApproveAttrApplyCCRequest ccRequest = ApproveAttrApplyCCRequest.builder()
-                    .uid(user.getName())
-                    .fromUid(request.getToUserName())
-                    .toOrgId(split[0].equals(user.getName()) ? "" : split[0])
-                    .attrName(request.getAttrName())
-                    .secret(secret)
-                    .agree(request.getAgree())
-                    .remark(request.getRemark())
-                    .build();
-            CCUtils.sign(ccRequest, priKey);
-            return chaincodeService.invoke(
-                    ChaincodeTypeEnum.TRUST_PLATFORM, "/user/approveAttrApply", ccRequest);
-        }catch (IOException e) {
-            throw new BaseException(e.getMessage());
-        }
-
     }
 
     @Override
@@ -420,11 +357,6 @@ public class AttrServiceImpl implements AttrService {
         AtomicBoolean success = new AtomicBoolean(true);
         ChaincodeResponse response = null;
         try {
-            String priKey = FileUtils.readFileToString(
-                new File(priKeyPath + fileName),
-                StandardCharsets.UTF_8);
-            PrivateKey privateKey = SecurityUtils.from(SecurityUtils.X509, priKey, "");
-
             response = queryAttrApply(
                 toUid, toOrgId, user.getName(), AttrApplyStatusEnum.SUCCESS);
             System.out.println("responsessssssssssssssssssssssssssss");

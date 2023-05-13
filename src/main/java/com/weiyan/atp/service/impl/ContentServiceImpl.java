@@ -82,27 +82,17 @@ public class ContentServiceImpl implements ContentService {
         String encryptedContent = getEncryptedContent(request);
         DABEUser user = dabeService.getUser(request.getFileName());
         Preconditions.checkNotNull(user.getName());
-
-        try {
-            String priKey = FileUtils.readFileToString(
-                new File(priKeyPath + request.getFileName()),
-                StandardCharsets.UTF_8);
-
-            ShareContentCCRequest shareContentCCRequest = ShareContentCCRequest.builder()
-                .uid(user.getName())
-                .tags(request.getTags())
-                .content(encryptedContent)
-                .build();
-            CCUtils.sign(shareContentCCRequest, priKey);
-            ChaincodeResponse response = chaincodeService.invoke(
-                ChaincodeTypeEnum.TRUST_PLATFORM, "/common/shareMessage", shareContentCCRequest);
-            if (response.isFailed()) {
-                log.info("invoke share content to plat error: {}", response.getMessage());
-                throw new BaseException("invoke share content to plat error");
-            }
-        } catch (IOException e) {
-            log.info("get priKey", e);
-            throw new BaseException(e.getMessage());
+        ShareContentCCRequest shareContentCCRequest = ShareContentCCRequest.builder()
+            .uid(user.getName())
+            .tags(request.getTags())
+            .content(encryptedContent)
+            .build();
+        CCUtils.SM2sign(shareContentCCRequest, request.getFileName(),user.getName());
+        ChaincodeResponse response = chaincodeService.invoke(
+            ChaincodeTypeEnum.TRUST_PLATFORM, "/common/shareMessage", shareContentCCRequest);
+        if (response.isFailed()) {
+            log.info("invoke share content to plat error: {}", response.getMessage());
+            throw new BaseException("invoke share content to plat error");
         }
         log.info("invoke share content to plat success");
     }
@@ -115,28 +105,18 @@ public class ContentServiceImpl implements ContentService {
         String encryptedContent = getEncryptedContent(request);
         DABEUser user = dabeService.getUser(request.getFileName());
         Preconditions.checkNotNull(user.getName());
-
-        try {
-            String priKey = FileUtils.readFileToString(
-                    new File(priKeyPath + request.getFileName()),
-                    StandardCharsets.UTF_8);
-
-            ShareContentCCRequest shareContentCCRequest = ShareContentCCRequest.builder()
-                    .uid(user.getName())
-                    .tags(request.getTags())
-                    //.content(encryptedContent)
-                    .fileName(request.getSharedFileName())
-                    .build();
-            CCUtils.sign(shareContentCCRequest, priKey);
-            ChaincodeResponse response = chaincodeService.invoke(
-                    ChaincodeTypeEnum.TRUST_PLATFORM, "/common/shareMessage", shareContentCCRequest);
-            if (response.isFailed()) {
-                log.info("invoke share content to plat error: {}", response.getMessage());
-                throw new BaseException("invoke share content to plat error");
-            }
-        } catch (IOException e) {
-            log.info("get priKey", e);
-            throw new BaseException(e.getMessage());
+        ShareContentCCRequest shareContentCCRequest = ShareContentCCRequest.builder()
+                .uid(user.getName())
+                .tags(request.getTags())
+                //.content(encryptedContent)
+                .fileName(request.getSharedFileName())
+                .build();
+        CCUtils.SM2sign(shareContentCCRequest, request.getFileName(),user.getName());
+        ChaincodeResponse response = chaincodeService.invoke(
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/common/shareMessage", shareContentCCRequest);
+        if (response.isFailed()) {
+            log.info("invoke share content to plat error: {}", response.getMessage());
+            throw new BaseException("invoke share content to plat error");
         }
         log.info("invoke share content to plat success");
 
@@ -155,10 +135,6 @@ public class ContentServiceImpl implements ContentService {
         String encryptedContent = getEncryptedContent(request);
         DABEUser user = dabeService.getUser(request.getFileName());
         Preconditions.checkNotNull(user.getName());
-        try {
-            String priKey = FileUtils.readFileToString(
-                    new File(priKeyPath + request.getFileName()),
-                    StandardCharsets.UTF_8);
         ShareContentCCRequest shareContentCCRequest = ShareContentCCRequest.builder()
                 .uid(user.getName())
                 .tags(request.getTags())
@@ -171,16 +147,12 @@ public class ContentServiceImpl implements ContentService {
                 .build();
         System.out.println("ccccccccccccccccc");
         System.out.println(shareContentCCRequest.toString());
-            CCUtils.sign(shareContentCCRequest, priKey);
+        CCUtils.SM2sign(shareContentCCRequest,request.getFileName(),user.getName());
         ChaincodeResponse response = chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/common/shareMessage", shareContentCCRequest);
         if (response.isFailed()) {
             log.info("invoke share content to plat error: {}", response.getMessage());
             throw new BaseException("invoke share content to plat error");
-        }
-        } catch (IOException e) {
-            log.info("get priKey", e);
-            throw new BaseException(e.getMessage());
         }
         log.info("invoke share content to plat success");
 
@@ -229,10 +201,6 @@ public class ContentServiceImpl implements ContentService {
 //        if (StringUtils.isEmpty(fromUserName) && StringUtils.isEmpty(tag)) {
 //            throw new BaseException("request error, cannot query all message");
 //        }
-        System.out.println("nnnnnnnnnnnnnnnn");
-        System.out.println(fromUserName);
-        System.out.println(tag);
-        System.out.println(bookmark);
         QueryContentsCCRequest request = QueryContentsCCRequest.builder()
             .fromUid(fromUserName)
             .tag(tag)

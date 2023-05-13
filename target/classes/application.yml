@@ -1,20 +1,39 @@
 logging:
   config: classpath:logback-spring.xml
+<<<<<<< HEAD
 #  level:
 #    org:
 #      springframework: DEBUG
+=======
+  level:
+    org:
+      springframework: DEBUG
+>>>>>>> guomi
 atp:
   devMode:
     peerName: peer
     ordererName: orderer
 #    peerUrl: grpc://192.168.31.128:7051
 #    peerUrl: grpc://8.133.190.119:7051
+<<<<<<< HEAD
     peerUrl: grpc://127.0.0.1:7051
 #    peerUrl: grpc://10.176.40.46:7051
+=======
+#    peerUrl: grpc://127.0.0.1:7051
+#    peerUrl: grpc://10.176.40.46:7051
+#    peerUrl: grpc://10.176.40.37:7051
+    peerUrl: grpc://127.0.0.1:7051
+
+>>>>>>> guomi
 #    peerUrl: grpc://10.177.88.201:7051
 #    ordererUrl: grpc://192.168.31.128:7050
 #    ordererUrl: grpc://8.133.190.119:7050
 #    ordererUrl: grpc://10.176.40.46:7050
+<<<<<<< HEAD
+=======
+#    ordererUrl: grpc://10.176.40.37:7050
+#    ordererUrl: grpc://10.176.40.37:7050
+>>>>>>> guomi
     ordererUrl: grpc://127.0.0.1:7050
 #    ordererUrl: grpc://10.177.88.201:7050
     channelName: myc
@@ -29,7 +48,13 @@ atp:
     shareData: atp/data/
     encryptData: atp/data/enc/
     cipherData: atp/data/cipher/
+<<<<<<< HEAD
     proofData: atp/proof/
+=======
+    shareSM2Data: atp/SM2data/
+    encryptSM2Data: atp/SM2data/enc/
+    cipherSM2Data: atp/SM2data/cipher/
+>>>>>>> guomi
 
 
 spring:

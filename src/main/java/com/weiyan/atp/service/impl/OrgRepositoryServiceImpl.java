@@ -1,7 +1,6 @@
 package com.weiyan.atp.service.impl;
 
 import com.google.common.base.Preconditions;
-
 import com.weiyan.atp.constant.BaseException;
 import com.weiyan.atp.constant.ChaincodeTypeEnum;
 import com.weiyan.atp.constant.OrgApplyStatusEnum;
@@ -69,6 +68,8 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
     private String userPath;
     @Value("${atp.path.privateKey}")
     private String priKeyPath;
+    @Value("${atp.path.publicKey}")
+    private String pubKeyPath;
 
     public OrgRepositoryServiceImpl(ChaincodeService chaincodeService, DABEService dabeService,
                                     UserRepositoryService userRepositoryService) {
@@ -98,7 +99,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
             .uid(user.getName())
             .userStr(JsonProviderHolder.JACKSON.toJsonString(user))
             .build();
-        CCUtils.sign(ccRequest, getPriKey(request.getFileName()));
+        CCUtils.SM2sign(ccRequest,request.getFileName(),user.getName());
         return chaincodeService.invoke(
             ChaincodeTypeEnum.TRUST_PLATFORM, "/org/createOrgApply", ccRequest);
     }
@@ -124,7 +125,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                 .uid(user.getName())
                 .userStr(JsonProviderHolder.JACKSON.toJsonString(user))
                 .build();
-        CCUtils.sign(ccRequest, getPriKey(request.getFileName()));
+        CCUtils.SM2sign(ccRequest,request.getFileName(),user.getName());
         return chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/org/createOrgApply", ccRequest);
     }
@@ -139,7 +140,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
             .attrName(request.getAttrName())
             .uid(user.getName())
             .build();
-        CCUtils.sign(ccRequest, getPriKey(request.getFileName()));
+        CCUtils.SM2sign(ccRequest,request.getFileName(),user.getName());
         return chaincodeService.invoke(
             ChaincodeTypeEnum.TRUST_PLATFORM, "/org/declareAttrApply", ccRequest);
     }
@@ -154,7 +155,8 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                 .attrName(request.getAttrName())
                 .uid(user.getName())
                 .build();
-        CCUtils.sign(ccRequest, getPriKey(request.getFileName()));
+
+        CCUtils.SM2sign(ccRequest,request.getFileName(),user.getName());
         return chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/org/declareAttrApply", ccRequest);
     }
@@ -181,7 +183,6 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                                 ApproveOrgApplyRequest request) {
         DABEUser user = dabeService.getUser(request.getFileName());
         Preconditions.checkNotNull(user.getName());
-        String priKey = getPriKey(request.getFileName());
 
         // 0_5. 查询必要的申请信息
         PlatOrgApply orgApply = queryOrgApply(request.getOrgName(), type, request.getAttrName());
@@ -193,7 +194,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                     .uid(user.getName())
                     .attrName(request.getAttrName())
                     .build();
-            CCUtils.sign(ccRequest1, priKey);
+            CCUtils.SM2sign(ccRequest1,request.getFileName(),user.getName());
             ChaincodeResponse response1 = chaincodeService.invoke(
                     ChaincodeTypeEnum.TRUST_PLATFORM, type.getApproveFunctionName(), ccRequest1);
             if (response1.isFailed()) {
@@ -247,7 +248,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                             .uid(user.getName())
                             .attrName(request.getAttrName())
                             .build();
-                    CCUtils.sign(ccRequest, priKey);
+                    CCUtils.SM2sign(ccRequest,request.getFileName(),user.getName());
                     ChaincodeResponse response = chaincodeService.invoke(
                             ChaincodeTypeEnum.TRUST_PLATFORM, "/org/shareSecret", ccRequest);
                     if (response.isFailed()) {
@@ -262,10 +263,11 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                                  ApproveOrgApplyRequest request) {
         DABEUser user = dabeService.getUser(request.getFileName());
         Preconditions.checkNotNull(user.getName());
-        String priKey = getPriKey(request.getFileName());
+//        String priKey = getPriKey(request.getFileName());
 
         // 0_5. 查询必要的申请信息
         PlatOrgApply orgApply = queryOrgApply(request.getOrgName(), type, request.getAttrName());
+        System.out.println(orgApply);
 
         // 1. plat的同意加入
         if (!orgApply.getFromUserName().equals(user.getName())) {
@@ -274,7 +276,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                     .uid(user.getName())
                     .attrName(request.getAttrName())
                     .build();
-            CCUtils.sign(ccRequest1, priKey);
+            CCUtils.SM2sign(ccRequest1,request.getFileName(),user.getName());
             ChaincodeResponse response1 = chaincodeService.invoke(
                     ChaincodeTypeEnum.TRUST_PLATFORM, type.getApproveFunctionName(), ccRequest1);
             if (response1.isFailed()) {
@@ -313,6 +315,8 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
         Map<String, String> shareMap = type == OrgApplyTypeEnum.CREATION
                 ? newUser.getOskMap().get(request.getOrgName()).getShare()
                 : newUser.getOskMap().get(request.getOrgName()).getAskMap().get(request.getAttrName()).getShare();
+        System.out.println(type);
+        System.out.println(shareMap);
         shareMap.entrySet()
                 .stream()
                 .filter(entry -> !entry.getKey().equals(user.getName()))
@@ -328,7 +332,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                             .uid(user.getName())
                             .attrName(request.getAttrName())
                             .build();
-                    CCUtils.sign(ccRequest, priKey);
+                    CCUtils.SM2sign(ccRequest,request.getFileName(),user.getName());
                     ChaincodeResponse response = chaincodeService.invoke(
                             ChaincodeTypeEnum.TRUST_PLATFORM, "/org/shareSecret", ccRequest);
                     if (response.isFailed()) {
@@ -349,8 +353,6 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                              String fileName, String attrName) {
         DABEUser user = dabeService.getUser(fileName);
         Preconditions.checkNotNull(user.getName());
-        String priKey = getPriKey(fileName);
-        PrivateKey privateKey = SecurityUtils.from(SecurityUtils.X509, priKey, "");
 
         if ((type == OrgApplyTypeEnum.CREATION && user.getOpkMap().containsKey(orgName)
             && StringUtils.isNotEmpty(user.getOpkMap().get(orgName).getOpk()))
@@ -360,7 +362,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
             //no need do anything
             log.info("already has part pk");
         } else {
-            user = generatePartPk(type, orgName, fileName, attrName, user, privateKey);
+            user = generatePartPk(type, orgName, fileName, attrName, user);
         }
 
         // 3. plat 提交 /org/submitPartPK
@@ -372,7 +374,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
             .uid(user.getName())
             .attrName(attrName)
             .build();
-        CCUtils.sign(request, priKey);
+        CCUtils.SM2sign(request,request.getUid(),user.getName());
         ChaincodeResponse response2 = chaincodeService.invoke(
             ChaincodeTypeEnum.TRUST_PLATFORM, "/org/submitPartPK", request);
         if (response2.isFailed()) {
@@ -385,8 +387,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                              String fileName, String attrName) {
         DABEUser user = dabeService.getUser(fileName);
         Preconditions.checkNotNull(user.getName());
-        String priKey = getPriKey(fileName);
-        PrivateKey privateKey = SecurityUtils.from(SecurityUtils.X509, priKey, "");
+
         if ((type == OrgApplyTypeEnum.CREATION && user.getOpkMap().containsKey(orgName)
                 && StringUtils.isNotEmpty(user.getOpkMap().get(orgName).getOpk()))
                 ||
@@ -395,7 +396,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
             //no need do anything
             log.info("already has part pk");
         } else {
-            user = generatePartPk(type, orgName, fileName, attrName, user, privateKey);
+            user = generatePartPk(type, orgName, fileName, attrName, user);
             System.out.println("0000000000000000000000000000");
             System.out.println(user);
 //            user = generatePartPk2(type, orgName, fileName, attrName, user);
@@ -410,7 +411,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                 .uid(user.getName())
                 .attrName(attrName)
                 .build();
-        CCUtils.sign(request, priKey);
+        CCUtils.SM2sign(request,request.getUid(),user.getName());
         ChaincodeResponse response2 = chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/org/submitPartPK", request);
         if (response2.isFailed()) {
@@ -419,7 +420,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
     }
 
     public DABEUser generatePartPk(OrgApplyTypeEnum type, String orgName, String fileName,
-                                   String attrName, DABEUser user, PrivateKey privateKey) {
+                                   String attrName, DABEUser user) {
         // 1. 获取其他人提供的秘密：检查是否能提交
         PlatOrgApply orgApply = queryOrgApply(orgName, type, attrName);
         if (orgApply.getShareMap().getOrDefault(user.getName(), new HashMap<>())
@@ -522,7 +523,6 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
     public void mixPartPk(OrgApplyTypeEnum type, String orgName, String attrName, String fileName) {
         DABEUser user = dabeService.getUser(fileName);
         Preconditions.checkNotNull(user.getName());
-        String priKey = getPriKey(fileName);
 
         MixPartPKCCRequest request = MixPartPKCCRequest.builder()
             .orgId(orgName)
@@ -530,7 +530,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
             .uid(user.getName())
             .attrName(attrName)
             .build();
-        CCUtils.sign(request, priKey);
+        CCUtils.SM2sign(request,fileName,user.getName());
         ChaincodeResponse response = chaincodeService.invoke(
             ChaincodeTypeEnum.TRUST_PLATFORM, "/org/mixPartPK", request);
         if (response.isFailed()) {
@@ -542,14 +542,13 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
     public void mixPartPk2(OrgApplyTypeEnum type, String orgName, String attrName, String fileName) {
         DABEUser user = dabeService.getUser(fileName);
         Preconditions.checkNotNull(user.getName());
-        String priKey = getPriKey(fileName);
         MixPartPKCCRequest request = MixPartPKCCRequest.builder()
                 .orgId(orgName)
                 .type(type)
                 .uid(user.getName())
                 .attrName(attrName)
                 .build();
-        CCUtils.sign(request, priKey);
+        CCUtils.SM2sign(request,request.getUid(),user.getName());
         ChaincodeResponse response = chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/org/mixPartPK", request);
         if (response.isFailed()) {
@@ -571,6 +570,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
 
     @Override
     public PlatOrgApply queryOrgApply(@NotEmpty String orgName, OrgApplyTypeEnum type, String attrName) {
+        System.out.println(type.getQueryFunctionName());
         ChaincodeResponse response = chaincodeService.query(ChaincodeTypeEnum.TRUST_PLATFORM,
             type.getQueryFunctionName(),
             QueryOrgApplyCCRequest.builder()
@@ -582,6 +582,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
         if (response.isFailed()) {
             throw new BaseException("query cc error: " + response.getMessage());
         }
+        System.out.println(response.getMessage());
         return JsonProviderHolder.JACKSON.parse(response.getMessage(), PlatOrgApply.class);
     }
 }

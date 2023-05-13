@@ -1,8 +1,8 @@
 logging:
   config: classpath:logback-spring.xml
-#  level:
-#    org:
-#      springframework: DEBUG
+  level:
+    org:
+      springframework: DEBUG
 atp:
   devMode:
     peerName: peer
@@ -11,10 +11,12 @@ atp:
 #    peerUrl: grpc://8.133.190.119:7051
     peerUrl: grpc://127.0.0.1:7051
 #    peerUrl: grpc://10.176.40.46:7051
+
 #    peerUrl: grpc://10.177.88.201:7051
 #    ordererUrl: grpc://192.168.31.128:7050
 #    ordererUrl: grpc://8.133.190.119:7050
 #    ordererUrl: grpc://10.176.40.46:7050
+
     ordererUrl: grpc://127.0.0.1:7050
 #    ordererUrl: grpc://10.177.88.201:7050
     channelName: myc
@@ -30,6 +32,9 @@ atp:
     encryptData: atp/data/enc/
     cipherData: atp/data/cipher/
     proofData: atp/proof/
+    shareSM2Data: atp/SM2data/
+    encryptSM2Data: atp/SM2data/enc/
+    cipherSM2Data: atp/SM2data/cipher/
 
 
 spring:

@@ -36,7 +36,7 @@ import java.util.Collections;
 
 import javax.validation.constraints.NotEmpty;
 import com.alibaba.fastjson.JSONObject;
-//import sun.security.util.Debug;
+
 
 
 /**
@@ -77,14 +77,10 @@ public class DABEServiceImpl implements DABEService {
             String resource = FileUtils.readFileToString(new File(filePath), StandardCharsets.UTF_8);
             System.out.println(resource);
             DABEUser user = JsonProviderHolder.JACKSON.parse(resource, DABEUser.class);
-            System.out.println("sorryyyyyyyy");
             String hash = SecurityUtils.md5(password);
-            System.out.println(user.getPassword());
             boolean ans = user.getPassword().equals(hash);
-            System.out.println(ans);
-            System.out.println("goodddddd");
             if (!user.getPassword().equals(hash)) {
-                System.out.println("qaqaqaqaqaqaq");
+                System.out.println("bad password");
                 return null;
             }
             return user;
@@ -153,7 +149,6 @@ public class DABEServiceImpl implements DABEService {
             return null;
         }
         String userJson = JsonProviderHolder.JACKSON.toJsonString(user);
-        System.out.println("22222222222");
         System.out.println(userJson);
         ChaincodeResponse response = chaincodeService.query(
                 ChaincodeTypeEnum.DABE, "/user/declareAttr",

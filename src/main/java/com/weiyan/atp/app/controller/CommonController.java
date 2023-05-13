@@ -4,12 +4,21 @@ import com.weiyan.atp.constant.BaseException;
 import com.weiyan.atp.data.bean.Result;
 import com.weiyan.atp.data.response.web.RsaKeysResponse;
 import com.weiyan.atp.utils.CCUtils;
+import com.weiyan.atp.data.bean.DABEUser;
+import com.weiyan.atp.data.bean.Result;
+import com.weiyan.atp.data.response.web.RsaKeysResponse;
+import com.weiyan.atp.data.response.web.SM2KeysResponse;
+import com.weiyan.atp.utils.CCUtils;
+import com.weiyan.atp.utils.JsonProviderHolder;
+import com.weiyan.atp.utils.SM2Utils;
 import com.weiyan.atp.utils.SecurityUtils;
 
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
@@ -21,10 +30,12 @@ import java.nio.charset.StandardCharsets;
  * @since : 2020/6/1
  */
 
+@Service
 @RestController
 @RequestMapping("/common")
 @Slf4j
 @CrossOrigin //支持跨域访问
+@Validated
 public class CommonController {
     @Value("${atp.path.privateKey}")
     private String priKeyPath;
@@ -78,5 +89,27 @@ public class CommonController {
             log.warn("generate rsa keys file error", e);
             return Result.internalError("generate rsa keys file error" + e.getMessage());
         }
+    }
+
+    public Result<Object> generateSM2KeysFile(String fileName) {
+        try {
+            SM2KeysResponse keysResponse= SM2Utils.getNewPublicKey();
+            String filePath1 = "atp/priKey/" + fileName;
+            String filePath2 = "atp/pubKey/" + fileName;
+            CCUtils.saveDABEUser(filePath1,keysResponse.getPriKey());
+            CCUtils.saveDABEUser(filePath2,keysResponse.getPubKey());
+            return Result.okWithData(keysResponse);
+        } catch (Exception e) {
+            log.warn("generate SM2 keys file error", e);
+            return Result.internalError("generate SM2 keys file error" + e.getMessage());
+        }
+    }
+
+    public String generateSign(String priKey,String pubKey,String userName,String args){
+        return SM2Utils.getSign(priKey,pubKey,userName,args);
+    }
+
+    public boolean getVerify(String userName,String pubKey, String sign, String args){
+        return SM2Utils.getVerify(userName,pubKey,sign,args);
     }
 }

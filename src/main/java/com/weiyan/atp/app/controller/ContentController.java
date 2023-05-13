@@ -276,20 +276,10 @@ public class ContentController {
         }
 //        String ipAddress = SecurityUtils.getIpAddr(req);
 ////        request.setIp(ipAddress);
-        if(request.getTags().get(2).equals("test")){
-            request.setIp("101.201.49.180");
-        }else{
-            request.setIp("58.247.201.96");
-        }
         //获取文件的原始名
         String filename = file.getOriginalFilename();
         System.out.println(filename);
 
-        //连接mysql
-        String driver = "com.mysql.cj.jdbc.Driver";	//驱动名，默认
-        String url1 = "jdbc:mysql://localhost:3306/zdyf?serverTimezone=GMT&useSSL=false";	//将要访问的数据库名称zdyf
-        String user = "root";	//mysql数据库用户名
-        String password = "123456";	//mysql数据库用户密码
 
 
         //根据相对路径获取绝对路径
@@ -399,8 +389,6 @@ public class ContentController {
         File dest = new File(new File(shareDataPath).getAbsolutePath()+ "/" + sharedUser+"/"+fileName);
         //获取输入流对象（用于读文件）
         FileInputStream fis = new FileInputStream(dest);
-        //获取文件后缀（.txt）
-        String extendFileName = fileName.substring(fileName.lastIndexOf('.'));
         //动态设置响应类型，根据前台传递文件类型设置响应类型
         //response.setContentType(request.getSession().getServletContext().getMimeType(extendFileName));
         //response.setContentType("content-type:octet-stream");

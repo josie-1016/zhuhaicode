@@ -2,7 +2,6 @@ package com.weiyan.atp.service;
 
 import com.weiyan.atp.data.bean.ChaincodeResponse;
 import com.weiyan.atp.data.request.web.ShareContentRequest;
-import com.weiyan.atp.data.request.web.UploadFileRequest;
 import com.weiyan.atp.data.response.intergration.EncryptionResponse;
 import com.weiyan.atp.data.response.web.PlatContentsResponse;
 

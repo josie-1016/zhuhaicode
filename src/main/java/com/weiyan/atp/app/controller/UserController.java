@@ -179,7 +179,6 @@ public class UserController {
 
     @PostMapping("/attr")
     public Result<Object> declareAttr(@RequestBody @Validated DeclareUserAttrRequest request) {
-        System.out.println("rrrrrrrrrrrrrrrrrrrrrrrr");
         System.out.println(request.toString());
         ChaincodeResponse response = attrService.declareUserAttr2(request);
 //        //对接
@@ -308,12 +307,9 @@ public class UserController {
     @GetMapping("/attr/apply")
     public Result<Object> queryAttrApply(String toId, Integer type, String userName,
                                          String status) {
-        System.out.println("1111111111111111111");
         if (type != 0 && type != 1) {
             throw new BaseException("wrong type");
         }
-        System.out.println(userName);
-        System.out.println("1111111111111111111111111111111111111");
         return attrService.queryAttrApply(type == 0 ? toId : "",
                         type == 1 ? toId : "", userName, AttrApplyStatusEnum.valueOf(status))
                 .getResult(str -> JsonProviderHolder.JACKSON.parseList(str, PlatUserAttrApply.class));
