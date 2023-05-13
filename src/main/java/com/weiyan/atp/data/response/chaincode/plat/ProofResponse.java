@@ -17,5 +17,6 @@ public class ProofResponse {
     private Commit commit1;
     private Commit commit2;
     private String open;
-    private String timestamp;
+    private String timestamp1;
+    private String timestamp2;
 }

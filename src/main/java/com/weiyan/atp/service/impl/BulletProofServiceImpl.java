@@ -78,6 +78,7 @@ public class BulletProofServiceImpl implements BulletProofService {
 
     @Override
     public ChaincodeResponse createBulletProof(CreateBulletProofRequest request) {
+        //生成承诺或证明
         DABEUser user = dabeService.getUser(request.getUserName());
         Preconditions.checkNotNull(user.getName());
         ChaincodeResponse response;
@@ -90,8 +91,9 @@ public class BulletProofServiceImpl implements BulletProofService {
                     .pid(request.getPid())
                     .tags(request.getTags())
                     .build();
+            // 存储数额的文件名
             String fileName = request.getPid()+createBPCCRequest.getTimestamp();
-            //TODO:还是把commit和proof分开
+            //生成承诺和[0,2^64]的范围证明
             if(request.getRange() == null){
                 CommitResponse commitResponse = getCommit(request.getValue());
                 createBPCCRequest.setCommit1(commitResponse.getCommit1());
@@ -99,9 +101,9 @@ public class BulletProofServiceImpl implements BulletProofService {
                 String proofpre = JsonProviderHolder.JACKSON.toJsonString(commitResponse.getProof());
                 createBPCCRequest.setProofpre(proofpre);
                 CCUtils.saveValue(valuePath, request.getUserName(), fileName, request.getValue(), commitResponse.getOpen());
-//                bulletProof = BulletProof.builder().commit1(commit).build();
             }else{
-                //获取value
+                //生成证明
+                //获取value和open
                 try {
                     String b = FileUtils.readFileToString(
                             new File(valuePath +  request.getUserName()+ "/" + request.getPid()+request.getTimestamp()),
@@ -112,18 +114,20 @@ public class BulletProofServiceImpl implements BulletProofService {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                //还是整个proof上链
+                //通过bp生成proof
                 BPResponse bp = getBulletProof(request.getValue(), request.getRange(), request.getOpen());
+                //value不满足range
+                if(bp == null){
+                    throw new BaseException("can't create proof");
+                }
                 createBPCCRequest.setCommit2(bp.getCommit2());
                 createBPCCRequest.setRange(request.getRange());
                 String proof = JsonProviderHolder.JACKSON.toJsonString(bp.getProof());
                 createBPCCRequest.setProof(proof);
 //                createBPCCRequest.setProofFileName(fileName);
             }
-//            createBPCCRequest.setBulletProof(bulletProof);
+            //对trustplatform的请求签名
             CCUtils.sign(createBPCCRequest, priKey);
-            //TODO：把proof存在文件中，只把文件名和commit上链？
-
             response =  chaincodeService.invoke(
                     ChaincodeTypeEnum.TRUST_PLATFORM, "/zk/create", createBPCCRequest);
             if (response.isFailed()) {
@@ -171,18 +175,17 @@ public class BulletProofServiceImpl implements BulletProofService {
         BulletProof proofpre = new BulletProof();
         if(!Objects.equals(request.getProofpre(), "")){
             proofpre = JsonProviderHolder.JACKSON.parse(request.getProofpre(), BulletProof.class);
-        } else {
-
         }
         Commit commit1 = JsonProviderHolder.JACKSON.parse(request.getCommit1(), Commit.class);
         Commit commit2 = JsonProviderHolder.JACKSON.parse(request.getCommit2(), Commit.class);
         String[] pids = request.getPid().split(",");
         //query tp 找到所有uid，pid，返回所有commit1
         if(pids.length > 1) {
+            //批量的验证
             QueryCommitBPCCRequest queryCommitBPCCRequest = QueryCommitBPCCRequest.builder().pids(Arrays.asList(pids)).uid(request.getUserName()).build();
             ChaincodeResponse response1 = chaincodeService.query(
                     ChaincodeTypeEnum.TRUST_PLATFORM, "/zk/getCommits", queryCommitBPCCRequest);
-            //，bp检查commits相加是否等于commit1？
+            //bp检查commits相加是否等于commit1,同时检查范围证明
             if (response1.isFailed()) {
                 log.info("query commits from tp error: {}", response1.getMessage());
                 throw new BaseException("query commits from tp error: " + response1.getMessage());
@@ -242,11 +245,7 @@ public class BulletProofServiceImpl implements BulletProofService {
             createBPCCRequest.setRange(request.getRange());
             String proof = JsonProviderHolder.JACKSON.toJsonString(bp.getProof());
             createBPCCRequest.setProof(proof);
-//                createBPCCRequest.setProofFileName(fileName);
-//            createBPCCRequest.setBulletProof(bulletProof);
             CCUtils.sign(createBPCCRequest, priKey);
-            //TODO：把proof存在文件中，只把文件名和commit上链？
-
             response =  chaincodeService.invoke(
                     ChaincodeTypeEnum.TRUST_PLATFORM, "/zk/create", createBPCCRequest);
             if (response.isFailed()) {
@@ -261,7 +260,6 @@ public class BulletProofServiceImpl implements BulletProofService {
     }
 
     private CommitResponse getCommit(String value) {
-//        CCUtils.saveValue(valuePath, username, fileName, value);
         ChaincodeResponse response = chaincodeService.query(
                 ChaincodeTypeEnum.BP, "/commit", new ArrayList<>(Arrays.asList(value)));
         CommitResponse comm = JsonProviderHolder.JACKSON.parse(response.getMessage(), CommitResponse.class);
@@ -277,8 +275,6 @@ public class BulletProofServiceImpl implements BulletProofService {
             return null;
         }
         BPResponse bp = JsonProviderHolder.JACKSON.parse(response.getMessage(), BPResponse.class);
-//        CCUtils.saveProof(proofPath, username, fileName, bp.getProof());
-//        return bp.getCommit2();
         return bp;
     }
 
