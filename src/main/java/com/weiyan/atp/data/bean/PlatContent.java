@@ -49,7 +49,7 @@ public class PlatContent {
         this.tags = response.getTags();
         this.fileName = response.getFileName();
         this.sharedUser = response.getUid();
-        this.timeStamp = response.getTimeStamp();
+        this.timeStamp = response.getTimestamp();
         this.ip = response.getIp();
         this.policy = response.getPolicy();
         try {

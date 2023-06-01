@@ -82,10 +82,6 @@ public class BulletProofServiceImpl implements BulletProofService {
         DABEUser user = dabeService.getUser(request.getUserName());
         Preconditions.checkNotNull(user.getName());
         ChaincodeResponse response;
-        try {
-            String  priKey = FileUtils.readFileToString(
-                    new File(priKeyPath + request.getUserName()),
-                    StandardCharsets.UTF_8);
             CreateBPCCRequest createBPCCRequest = CreateBPCCRequest.builder()
                     .uid(user.getName())
                     .pid(request.getPid())
@@ -127,17 +123,14 @@ public class BulletProofServiceImpl implements BulletProofService {
 //                createBPCCRequest.setProofFileName(fileName);
             }
             //对trustplatform的请求签名
-            CCUtils.sign(createBPCCRequest, priKey);
+            CCUtils.SM2sign(createBPCCRequest,request.getUserName(),user.getName());
+//            CCUtils.sign(createBPCCRequest, priKey);
             response =  chaincodeService.invoke(
                     ChaincodeTypeEnum.TRUST_PLATFORM, "/zk/create", createBPCCRequest);
             if (response.isFailed()) {
                 log.info("invoke create zk error: {}", response.getMessage());
                 throw new BaseException("invoke create zk error");
             }
-        } catch (IOException e) {
-            log.info("get priKey", e);
-            throw new BaseException(e.getMessage());
-        }
         return response;
     }
 
@@ -210,10 +203,6 @@ public class BulletProofServiceImpl implements BulletProofService {
         DABEUser user = dabeService.getUser(request.getUserName());
         Preconditions.checkNotNull(user.getName());
         ChaincodeResponse response;
-        try {
-            String  priKey = FileUtils.readFileToString(
-                    new File(priKeyPath + request.getUserName()),
-                    StandardCharsets.UTF_8);
             CreateBPCCRequest createBPCCRequest = CreateBPCCRequest.builder()
                     .uid(user.getName())
                     .tags(request.getTags())
@@ -245,17 +234,14 @@ public class BulletProofServiceImpl implements BulletProofService {
             createBPCCRequest.setRange(request.getRange());
             String proof = JsonProviderHolder.JACKSON.toJsonString(bp.getProof());
             createBPCCRequest.setProof(proof);
-            CCUtils.sign(createBPCCRequest, priKey);
+            CCUtils.SM2sign(createBPCCRequest,request.getUserName(),user.getName());
+//            CCUtils.sign(createBPCCRequest, priKey);
             response =  chaincodeService.invoke(
                     ChaincodeTypeEnum.TRUST_PLATFORM, "/zk/create", createBPCCRequest);
             if (response.isFailed()) {
                 log.info("invoke create zk error: {}", response.getMessage());
                 throw new BaseException("invoke create zk error");
             }
-        } catch (IOException e) {
-            log.info("get priKey", e);
-            throw new BaseException(e.getMessage());
-        }
         return response;
     }
 
