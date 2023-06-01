@@ -8,15 +8,18 @@ import com.weiyan.atp.constant.ChaincodeTypeEnum;
 import com.weiyan.atp.data.bean.ChaincodeResponse;
 import com.weiyan.atp.data.bean.DABEUser;
 import com.weiyan.atp.data.bean.PlatContent;
+import com.weiyan.atp.data.bean.PlatOrg;
 import com.weiyan.atp.data.request.chaincode.dabe.DecryptContentCCRequest;
 import com.weiyan.atp.data.request.chaincode.dabe.EncryptContentCCRequest;
 import com.weiyan.atp.data.request.chaincode.plat.QueryContentsCCRequest;
+import com.weiyan.atp.data.request.chaincode.plat.QueryThresholdCCRequest;
 import com.weiyan.atp.data.request.chaincode.plat.ShareContentCCRequest;
 import com.weiyan.atp.data.request.web.ShareContentRequest;
-import com.weiyan.atp.data.request.web.UploadFileRequest;
+import com.weiyan.atp.data.request.web.ThresholdFilesRequest;
 import com.weiyan.atp.data.response.chaincode.plat.BaseListResponse;
 import com.weiyan.atp.data.response.chaincode.plat.ContentResponse;
 import com.weiyan.atp.data.response.intergration.EncryptionResponse;
+import com.weiyan.atp.data.response.intergration.ThresholdResponse;
 import com.weiyan.atp.data.response.web.PlatContentsResponse;
 import com.weiyan.atp.service.AttrService;
 import com.weiyan.atp.service.ChaincodeService;
@@ -30,7 +33,6 @@ import com.weiyan.atp.utils.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -85,17 +87,17 @@ public class ContentServiceImpl implements ContentService {
 
         try {
             String priKey = FileUtils.readFileToString(
-                new File(priKeyPath + request.getFileName()),
-                StandardCharsets.UTF_8);
+                    new File(priKeyPath + request.getFileName()),
+                    StandardCharsets.UTF_8);
 
             ShareContentCCRequest shareContentCCRequest = ShareContentCCRequest.builder()
-                .uid(user.getName())
-                .tags(request.getTags())
-                .content(encryptedContent)
-                .build();
+                    .uid(user.getName())
+                    .tags(request.getTags())
+                    .content(encryptedContent)
+                    .build();
             CCUtils.sign(shareContentCCRequest, priKey);
             ChaincodeResponse response = chaincodeService.invoke(
-                ChaincodeTypeEnum.TRUST_PLATFORM, "/common/shareMessage", shareContentCCRequest);
+                    ChaincodeTypeEnum.TRUST_PLATFORM, "/common/shareMessage", shareContentCCRequest);
             if (response.isFailed()) {
                 log.info("invoke share content to plat error: {}", response.getMessage());
                 throw new BaseException("invoke share content to plat error");
@@ -159,25 +161,25 @@ public class ContentServiceImpl implements ContentService {
             String priKey = FileUtils.readFileToString(
                     new File(priKeyPath + request.getFileName()),
                     StandardCharsets.UTF_8);
-        ShareContentCCRequest shareContentCCRequest = ShareContentCCRequest.builder()
-                .uid(user.getName())
-                .tags(request.getTags())
-               // .content(encryptedContent)
-                .timestamp(new Date().toString())
-                .fileName(request.getSharedFileName())
-                .ip(request.getIp())
-                .location(request.getLocation())
-                .policy(request.getPolicy())
-                .build();
-        System.out.println("ccccccccccccccccc");
-        System.out.println(shareContentCCRequest.toString());
+            ShareContentCCRequest shareContentCCRequest = ShareContentCCRequest.builder()
+                    .uid(user.getName())
+                    .tags(request.getTags())
+                    // .content(encryptedContent)
+                    .timestamp(new Date().toString())
+                    .fileName(request.getSharedFileName())
+                    .ip(request.getIp())
+                    .location(request.getLocation())
+                    .policy(request.getPolicy())
+                    .build();
+            System.out.println("ccccccccccccccccc");
+            System.out.println(shareContentCCRequest.toString());
             CCUtils.sign(shareContentCCRequest, priKey);
-        ChaincodeResponse response = chaincodeService.invoke(
-                ChaincodeTypeEnum.TRUST_PLATFORM, "/common/shareMessage", shareContentCCRequest);
-        if (response.isFailed()) {
-            log.info("invoke share content to plat error: {}", response.getMessage());
-            throw new BaseException("invoke share content to plat error");
-        }
+            ChaincodeResponse response = chaincodeService.invoke(
+                    ChaincodeTypeEnum.TRUST_PLATFORM, "/common/shareMessage", shareContentCCRequest);
+            if (response.isFailed()) {
+                log.info("invoke share content to plat error: {}", response.getMessage());
+                throw new BaseException("invoke share content to plat error");
+            }
         } catch (IOException e) {
             log.info("get priKey", e);
             throw new BaseException(e.getMessage());
@@ -196,11 +198,45 @@ public class ContentServiceImpl implements ContentService {
 
 
     @Override
+    public ThresholdResponse encThresholdContent(ThresholdFilesRequest request) {
+        String encryptedContent = getThresholdEncryptedContent(request);
+
+        PlatOrg platOrg = orgRepositoryService.queryOrg(request.getOrgName());
+        Preconditions.checkNotNull(platOrg.getOrgId());
+        ShareContentCCRequest shareContentCCRequest = ShareContentCCRequest.builder()
+                .uid(platOrg.getOrgId())
+//                    .tags(request.getTags())
+                // .content(encryptedContent)
+                .timestamp(new Date().toString())
+                .fileName(request.getFileName())
+//                    .ip(request.getIp())
+//                    .location(request.getLocation())
+//                    .policy(request.getPolicy())
+                .build();
+        System.out.println("ccccccccccccccccc");
+        ChaincodeResponse response = chaincodeService.invoke(
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/common/shareMessageThreshold", shareContentCCRequest);
+        if (response.isFailed()) {
+            log.info("invoke Threshold content to plat error: {}", response.getMessage());
+            throw new BaseException("invoke Threshold content to plat error");
+        }
+
+        log.info("invoke Threshold content to plat success");
+        return ThresholdResponse.builder()
+                .cipher(encryptedContent)
+                .orgName(request.getOrgName())
+                .timeStamp(String.valueOf(System.currentTimeMillis()))
+                .filename(request.getFileName())
+                .build();
+    }
+
+
+
     public String decryptContent(@NotEmpty String cipher, @NotEmpty String fileName) {
         DABEUser user = dabeService.getUser(fileName);
-        DecryptContentCCRequest ccRequest = new DecryptContentCCRequest(cipher,"", "",user);
+        DecryptContentCCRequest ccRequest = new DecryptContentCCRequest(cipher, "", "", user);
         ChaincodeResponse response = chaincodeService.query(
-            ChaincodeTypeEnum.DABE, "/common/decrypt", ccRequest);
+                ChaincodeTypeEnum.DABE, "/common/decrypt", ccRequest);
         if (response.isFailed()) {
             throw new BaseException("decryption error: " + response.getMessage());
         }
@@ -208,7 +244,7 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
-    public ChaincodeResponse decryptContent2(@NotEmpty String cipher, @NotEmpty String userName,  @NotEmpty String fileName,  @NotEmpty String sharedUser) {
+    public ChaincodeResponse decryptContent2(@NotEmpty String cipher, @NotEmpty String userName, @NotEmpty String fileName, @NotEmpty String sharedUser) {
         DABEUser user = dabeService.getUser(userName);
         DecryptContentCCRequest ccRequest = new DecryptContentCCRequest(cipher, fileName, sharedUser, user);
         return chaincodeService.query(
@@ -216,9 +252,9 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
-    public ChaincodeResponse getCipher(@NotEmpty String userName,  @NotEmpty String fileName,  @NotEmpty String sharedUser) {
+    public ChaincodeResponse getCipher(@NotEmpty String userName, @NotEmpty String fileName, @NotEmpty String sharedUser) {
         DABEUser user = dabeService.getUser(userName);
-        DecryptContentCCRequest ccRequest = new DecryptContentCCRequest(userName,fileName,sharedUser);
+        DecryptContentCCRequest ccRequest = new DecryptContentCCRequest(userName, fileName, sharedUser);
         return chaincodeService.query(
                 ChaincodeTypeEnum.DABE, "/common/getCipher", ccRequest);
     }
@@ -234,13 +270,13 @@ public class ContentServiceImpl implements ContentService {
         System.out.println(tag);
         System.out.println(bookmark);
         QueryContentsCCRequest request = QueryContentsCCRequest.builder()
-            .fromUid(fromUserName)
-            .tag(tag)
-            .bookmark(bookmark)
-            .pageSize(pageSize)
-            .build();
+                .fromUid(fromUserName)
+                .tag(tag)
+                .bookmark(bookmark)
+                .pageSize(pageSize)
+                .build();
         ChaincodeResponse response = chaincodeService.query(
-            ChaincodeTypeEnum.TRUST_PLATFORM, "/common/getMessage", request);
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/common/getMessage", request);
         if (response.isFailed()) {
             log.info("query contents from plat error: {}", response.getMessage());
             throw new BaseException("query contents from plat error: " + response.getMessage());
@@ -248,32 +284,77 @@ public class ContentServiceImpl implements ContentService {
         System.out.println("response:");
         System.out.println(response.getMessage());
         BaseListResponse<ContentResponse> baseListResponse = JsonProviderHolder.JACKSON.parse(
-            response.getMessage(), new TypeReference<BaseListResponse<ContentResponse>>() {});
+                response.getMessage(), new TypeReference<BaseListResponse<ContentResponse>>() {
+                });
         //System.out.println("baselistresponse:");
         //System.out.println(baseListResponse.getResult().stream());
         return PlatContentsResponse.builder()
-            .bookmark(baseListResponse.getResponseMetadata().getBookmark())
-            .count(Integer.parseInt(baseListResponse.getResponseMetadata().getRecordsCount()))
-            .pageSize(pageSize)
-            .contents(baseListResponse.getResult().stream()
-                .map(contentResponseCCResult -> new PlatContent(contentResponseCCResult.getRecord()))
-                .collect(Collectors.toList()))
-            .build();
+                .bookmark(baseListResponse.getResponseMetadata().getBookmark())
+                .count(Integer.parseInt(baseListResponse.getResponseMetadata().getRecordsCount()))
+                .pageSize(pageSize)
+                .contents(baseListResponse.getResult().stream()
+                        .map(contentResponseCCResult -> new PlatContent(contentResponseCCResult.getRecord()))
+                        .collect(Collectors.toList()))
+                .build();
 
     }
-
+    @Override
+    public PlatContentsResponse queryThresholdPlatContents(String orgName, String fileName) {
+        QueryThresholdCCRequest request = QueryThresholdCCRequest.builder()
+                .fileName(fileName)
+                .orgName(orgName)
+                .build();
+        ChaincodeResponse response = chaincodeService.query(
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/common/getThresholdMessage", request);
+        if (response.isFailed()) {
+            log.info("query ThresholdContents from plat error: {}", response.getMessage());
+            throw new BaseException("query ThresholdContents from plat error: " + response.getMessage());
+        }
+        System.out.println(response.getMessage());
+        BaseListResponse<ContentResponse> baseListResponse = JsonProviderHolder.JACKSON.parse(
+                response.getMessage(), new TypeReference<BaseListResponse<ContentResponse>>() {
+                });
+        return PlatContentsResponse.builder()
+                .bookmark(baseListResponse.getResponseMetadata().getBookmark())
+                .count(Integer.parseInt(baseListResponse.getResponseMetadata().getRecordsCount()))
+                .pageSize(1)
+                .contents(baseListResponse.getResult().stream()
+                        .map(contentResponseCCResult -> new PlatContent(contentResponseCCResult.getRecord()))
+                        .collect(Collectors.toList()))
+                .build();
+    }
     private String getEncryptedContent(ShareContentRequest request) {
         EncryptContentCCRequest ccRequest = EncryptContentCCRequest.builder()
-            .plainContent(request.getPlainContent())
-            .policy(request.getPolicy())
-            .fileName(request.getSharedFileName())
-            .userName(request.getFileName())
-            .authorityMap(EncryptContentCCRequest.buildAuthorityMap(
-                request.getPolicy(), attrService, userRepositoryService, orgRepositoryService))
-            .build();
+                .plainContent(request.getPlainContent())
+                .policy(request.getPolicy())
+                .fileName(request.getSharedFileName())
+                .userName(request.getFileName())
+                .authorityMap(EncryptContentCCRequest.buildAuthorityMap(
+                        request.getPolicy(), attrService, userRepositoryService, orgRepositoryService))
+                .build();
 
         ChaincodeResponse response =
-            chaincodeService.query(ChaincodeTypeEnum.DABE, "/common/encrypt", ccRequest);
+                chaincodeService.query(ChaincodeTypeEnum.DABE, "/common/encrypt", ccRequest);
+        if (response.isFailed()) {
+            log.info("query for encrypt error: {}", response.getMessage());
+            throw new BaseException("query for encrypt error: " + response.getMessage());
+        }
+        return response.getMessage();
+    }
+
+    private String getThresholdEncryptedContent(ThresholdFilesRequest request) {
+
+        ChaincodeResponse response1 =
+                chaincodeService.query(ChaincodeTypeEnum.TRUST_PLATFORM, "/org/queryOrgMen", request.getOrgName());
+        EncryptContentCCRequest ccRequest = EncryptContentCCRequest.builder()
+                .plainContent(request.getPlainContent())
+                .policy(request.getOrgName())                              //policy:组织名称
+               .userName(response1.getMessage())                           //username:组织门限公钥
+                .build();
+
+
+        ChaincodeResponse response =
+                chaincodeService.query(ChaincodeTypeEnum.DABE, "/common/encryptMen", ccRequest);
         if (response.isFailed()) {
             log.info("query for encrypt error: {}", response.getMessage());
             throw new BaseException("query for encrypt error: " + response.getMessage());

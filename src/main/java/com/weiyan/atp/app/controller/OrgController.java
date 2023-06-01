@@ -3,9 +3,7 @@ package com.weiyan.atp.app.controller;
 import com.weiyan.atp.constant.OrgApplyTypeEnum;
 import com.weiyan.atp.data.bean.PlatOrgApply;
 import com.weiyan.atp.data.bean.Result;
-import com.weiyan.atp.data.request.web.ApproveOrgApplyRequest;
-import com.weiyan.atp.data.request.web.CreateOrgRequest;
-import com.weiyan.atp.data.request.web.DeclareOrgAttrRequest;
+import com.weiyan.atp.data.request.web.*;
 import com.weiyan.atp.service.OrgRepositoryService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +44,7 @@ public class OrgController {
         return Result.success();
     }
 
+
     /**
      * 申请声明属性
      */
@@ -54,6 +53,11 @@ public class OrgController {
         return orgRepositoryService.applyDeclareOrgAttr2(request).getResult(str -> str);
     }
 
+    //门限申请
+    @PostMapping("/apply/threshold")
+    public Result<Object> applyThreshold(ThresholdApplyRequest request) {
+        return orgRepositoryService.applyThresholdFile(request).getResult(str -> str);
+    }
     /**
      * 审批/同意声明属性
      * 自动提交分享给其他人的秘密
@@ -61,6 +65,13 @@ public class OrgController {
     @PostMapping("/apply/attribute/approval")
     public Result<Object> approveDeclareAttrApply(@RequestBody @Validated ApproveOrgApplyRequest request) {
         orgRepositoryService.approveOrgApply2(OrgApplyTypeEnum.ATTRIBUTE, request);
+        return Result.success();
+    }
+//    同意申请下载文件
+    @PostMapping("apply/ThresholdFile/approval")
+    public Result<Object> approvalThresholdFileApply(@RequestBody ApproveThresholdFileQApply request){
+        //调用门限申请
+        orgRepositoryService.approveThresholdFileApply(request);
         return Result.success();
     }
 
