@@ -28,4 +28,6 @@ public interface ContentService {
 
     EncryptionResponse encContent(ShareContentRequest request);
     EncryptionResponse encContent2(ShareContentRequest request);
+
+    String[] getOrgMembers(String org);
 }

@@ -37,4 +37,6 @@ public class ShareContentRequest {
     private String ip;
 
     private String location;
+
+    private String uploader;
 }

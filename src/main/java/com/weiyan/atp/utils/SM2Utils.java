@@ -5,10 +5,14 @@ import com.weiyan.atp.data.bean.PublicKey;
 import com.weiyan.atp.data.bean.SignaTure;
 import com.weiyan.atp.data.response.web.SM2KeysResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
 import org.bouncycastle.math.ec.ECPoint;
 
 import javax.validation.constraints.NotEmpty;
+import java.io.File;
+import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
@@ -43,7 +47,11 @@ public class SM2Utils {
                         log.warn("getNewPublicKey error", e);
                         return null;
                 }
-        };
+        }
+
+        public static SM2KeyPair getNewKey() {
+                return sm02.generateKeyPair();
+        }
 
         public static String getSign(@NotEmpty String priKey,String pubKey,String userName,String args){
           try{
@@ -89,6 +97,25 @@ public class SM2Utils {
                 byte[] cipher=sm02.encrypt(data,publicKey);
                 String c= Base64.getEncoder().encodeToString(cipher);
                 return c;
+        }
+
+        public static String Decrypt(String pri, String data){
+                PrivateKey priv=JsonProviderHolder.JACKSON.parse(pri,PrivateKey.class);
+                String m=sm02.decrypt(data.getBytes(),priv.getKey());
+                return m;
+        }
+
+        public static SM2KeyPair GetKey(String pri,String pub){
+                PublicKey publ=JsonProviderHolder.JACKSON.parse(pub,PublicKey.class);
+                ECPoint publicKey= sm02.getPoint(publ.getX(),publ.getY());
+                SM2KeyPair key;
+                if (pri!=null){
+                        PrivateKey priv=JsonProviderHolder.JACKSON.parse(pri,PrivateKey.class);
+                        key=new SM2KeyPair(publicKey,priv.getKey());
+                }else{
+                        key=new SM2KeyPair(publicKey,null);
+                }
+                return key;
         }
 
 }

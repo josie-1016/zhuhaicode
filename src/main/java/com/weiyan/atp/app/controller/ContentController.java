@@ -8,12 +8,12 @@ import com.weiyan.atp.data.request.web.DecryptContentRequest;
 import com.weiyan.atp.data.request.web.RevokeUserAttrRequest;
 import com.weiyan.atp.data.request.web.ShareContentRequest;
 import com.weiyan.atp.data.response.intergration.EncryptionResponse;
+import com.weiyan.atp.data.response.intergration.RingSignatureResponse;
 import com.weiyan.atp.data.response.web.PlatContentsResponse;
 import com.weiyan.atp.service.AttrService;
 import com.weiyan.atp.service.ContentService;
 import com.weiyan.atp.service.DABEService;
-import com.weiyan.atp.utils.JsonProviderHolder;
-import com.weiyan.atp.utils.SecurityUtils;
+import com.weiyan.atp.utils.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.http.HttpEntity;
@@ -43,7 +43,9 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 /**
  * @author : 魏延thor
@@ -70,11 +72,17 @@ public class ContentController {
     @Value("${atp.path.encryptData}")
     private String encryptDataPath;
 
+    @Value("${atp.path.ringSigData}")
+    private String ringSigDataPath;
+
     @Value("${atp.path.cipherData}")
     private String cipherDataPath;
 
     @Value("${atp.path.dabeUser}")
     private String userPath;
+
+    @Value("${atp.path.publicKey}")
+    private String pubKeyPath;
 
     @Value("${spring.datasource.url}")
     private String mysqlUrl;
@@ -283,7 +291,12 @@ public class ContentController {
 
 
         //根据相对路径获取绝对路径
-        File dest = new File(new File(shareDataPath).getAbsolutePath()+ "/" + request.getFileName()+"/"+filename);
+        String uploader=request.getFileName();
+        System.out.println(request.getUploader());
+        if (!request.getUploader().equals(request.getFileName())){
+            uploader=request.getUploader();
+        }
+        File dest = new File(new File(shareDataPath).getAbsolutePath()+ "/" + uploader+"/"+filename);
         System.out.println(dest.getPath());
         if (!dest.getParentFile().exists()) {
             dest.getParentFile().mkdir();
@@ -298,8 +311,14 @@ public class ContentController {
         request.setSharedFileName(filename);
         EncryptionResponse encryptionResponse = contentService.encContent2(request);
 
-        FileUtils.write(new File(encryptDataPath +request.getFileName()+"/"+ filename), encryptionResponse.getCipher(),
+        FileUtils.write(new File(encryptDataPath +uploader+"/"+ filename), encryptionResponse.getCipher(),
                 StandardCharsets.UTF_8);
+        // 环签名
+        // save signature for verify
+        String ringSig=JsonProviderHolder.JACKSON.toJsonString(encryptionResponse.getRingSignature());
+        FileUtils.write(new File(ringSigDataPath +uploader+"/"+ filename),ringSig ,
+                StandardCharsets.UTF_8);
+        System.out.println(ringSig);
 
 
         try {
@@ -380,6 +399,60 @@ public class ContentController {
             attrService.syncSuccessAttrApply(request.getFileName());
         }
         return Result.success();
+    }
+
+    // 环签名
+    // 验签
+    @PostMapping("/verify")
+    public Result<String> verifySignature(String userName,String fileName, String sharedUser,HttpServletRequest request) {
+        System.out.println("开始验签");
+        System.out.println(userName);
+        System.out.println(fileName);
+        System.out.println(sharedUser);
+        try {
+            // get ringSignature
+            String filePath = ringSigDataPath + sharedUser + "/" + fileName;
+            String ringSig = FileUtils.readFileToString(new File(filePath), StandardCharsets.UTF_8);
+            RingSignatureResponse ringS=JsonProviderHolder.JACKSON.parse(ringSig,RingSignatureResponse.class);
+            System.out.println(ringSig);
+
+            // get encryptedContent
+            filePath = encryptDataPath + sharedUser + "/" + fileName;
+            String encryptedContent = FileUtils.readFileToString(new File(filePath), StandardCharsets.UTF_8);
+            System.out.println(encryptedContent);
+
+            // verify
+            DABEUser user = dabeService.getUser(sharedUser);
+            if (user == null) {
+                // verify RingSignature
+                String[] orgMembers=contentService.getOrgMembers(sharedUser);
+                List<SM2KeyPair> orgKey = new ArrayList<>();
+                try {
+                    // 获取组织内成员公钥
+                    for(int i=0;i<orgMembers.length;i++){
+                        String pubKey = FileUtils.readFileToString(new File(pubKeyPath + orgMembers[i]),
+                                StandardCharsets.UTF_8);
+                        orgKey.add(SM2Utils.GetKey(null,pubKey));
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                SM2KeyPair[] KeyPairs= orgKey.toArray(new SM2KeyPair[orgKey.size()]);
+                if(!RingSignatures.verify(ringS.getSig(),ringS.getRsa(),encryptedContent.getBytes(),1024)){
+                    return Result.internalError("Signature Verification Failed!!!");
+                }
+            } else {
+                //verify Signature
+                String pubKey = FileUtils.readFileToString(new File(pubKeyPath + sharedUser),
+                        StandardCharsets.UTF_8);
+                if(!SM2Utils.getVerify(sharedUser, pubKey, ringS.getSig(),encryptedContent)){
+                    return Result.internalError("Signature Verification Failed!!!");
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return Result.okWithData(null);
     }
 
     //下载解密后的原文

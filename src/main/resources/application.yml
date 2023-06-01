@@ -30,6 +30,7 @@ atp:
     cert: atp/cert/
     shareData: atp/data/
     encryptData: atp/data/enc/
+    ringSigData: atp/data/ringSig/
     cipherData: atp/data/cipher/
     proofData: atp/proof/
     shareSM2Data: atp/SM2data/

@@ -11,26 +11,25 @@ import com.weiyan.atp.data.bean.PlatContent;
 import com.weiyan.atp.data.request.chaincode.dabe.DecryptContentCCRequest;
 import com.weiyan.atp.data.request.chaincode.dabe.EncryptContentCCRequest;
 import com.weiyan.atp.data.request.chaincode.plat.QueryContentsCCRequest;
+import com.weiyan.atp.data.request.chaincode.plat.QueryOrgCCRequest;
 import com.weiyan.atp.data.request.chaincode.plat.ShareContentCCRequest;
 import com.weiyan.atp.data.request.web.ShareContentRequest;
-import com.weiyan.atp.data.request.web.UploadFileRequest;
 import com.weiyan.atp.data.response.chaincode.plat.BaseListResponse;
 import com.weiyan.atp.data.response.chaincode.plat.ContentResponse;
+import com.weiyan.atp.data.response.chaincode.plat.OrgMembersResponse;
 import com.weiyan.atp.data.response.intergration.EncryptionResponse;
+import com.weiyan.atp.data.response.intergration.RingSignatureResponse;
 import com.weiyan.atp.data.response.web.PlatContentsResponse;
 import com.weiyan.atp.service.AttrService;
 import com.weiyan.atp.service.ChaincodeService;
 import com.weiyan.atp.service.ContentService;
 import com.weiyan.atp.service.DABEService;
 import com.weiyan.atp.service.UserRepositoryService;
-import com.weiyan.atp.utils.CCUtils;
-import com.weiyan.atp.utils.JsonProviderHolder;
+import com.weiyan.atp.utils.*;
 
-import com.weiyan.atp.utils.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -38,7 +37,7 @@ import org.springframework.validation.annotation.Validated;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import javax.validation.constraints.NotEmpty;
@@ -59,6 +58,9 @@ public class ContentServiceImpl implements ContentService {
 
     @Value("${atp.path.privateKey}")
     private String priKeyPath;
+
+    @Value("${atp.path.publicKey}")
+    private String pubKeyPath;
 
     @Value("${atp.path.shareData}")
     private String shareDataPath;
@@ -135,6 +137,58 @@ public class ContentServiceImpl implements ContentService {
         String encryptedContent = getEncryptedContent(request);
         DABEUser user = dabeService.getUser(request.getFileName());
         Preconditions.checkNotNull(user.getName());
+        // 环签名
+        String org="";
+        RingSignatureResponse ringSig=new RingSignatureResponse();
+        if(!request.getUploader().equals(request.getFileName())){
+            // getRingSignature
+            org=request.getUploader();
+            // get Org Members
+            String[] orgMembers=getOrgMembers(org);
+            // 确保签名用户在组织内
+            if (!Arrays.asList(orgMembers).contains(request.getFileName())){
+                log.info("user is not in org {}",org);
+                throw new BaseException("user is not in org");
+            }
+            List<SM2KeyPair> orgKey = new ArrayList<>();
+            try {
+                // 获取签名用户公私钥
+                String priKey = FileUtils.readFileToString(
+                        new File(priKeyPath + request.getFileName()),
+                        StandardCharsets.UTF_8);
+                String pubKey = FileUtils.readFileToString(new File(pubKeyPath + request.getFileName()),
+                        StandardCharsets.UTF_8);
+                orgKey.add(SM2Utils.GetKey(priKey,pubKey));
+                // 获取组织内其他人公钥
+                for(int i=0;i<orgMembers.length;i++){
+                    if(orgMembers[i].equals(request.getFileName())) {continue;}
+                    pubKey = FileUtils.readFileToString(new File(pubKeyPath + orgMembers[i]),
+                            StandardCharsets.UTF_8);
+                    orgKey.add(SM2Utils.GetKey(null,pubKey));
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            SM2KeyPair[] KeyPairs= orgKey.toArray(new SM2KeyPair[orgKey.size()]);
+            try {
+                ringSig=RingSignatures.genRing(KeyPairs,encryptedContent.getBytes(),1024,new Random());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }else{
+            //get 'encryptedContent' Signature
+            try {
+                String priKey = FileUtils.readFileToString(
+                        new File(priKeyPath + user.getName()),
+                        StandardCharsets.UTF_8);
+                String pubKey = FileUtils.readFileToString(new File(pubKeyPath + user.getName()),
+                        StandardCharsets.UTF_8);
+                String ringS=SM2Utils.getSign(priKey,pubKey,user.getName(),encryptedContent);
+                ringSig.setSig(ringS);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
         ShareContentCCRequest shareContentCCRequest = ShareContentCCRequest.builder()
                 .uid(user.getName())
                 .tags(request.getTags())
@@ -144,6 +198,7 @@ public class ContentServiceImpl implements ContentService {
                 .ip(request.getIp())
                 .location(request.getLocation())
                 .policy(request.getPolicy())
+                .org(org)
                 .build();
         System.out.println("ccccccccccccccccc");
         System.out.println(shareContentCCRequest.toString());
@@ -156,6 +211,8 @@ public class ContentServiceImpl implements ContentService {
         }
         log.info("invoke share content to plat success");
 
+        // 环签名
+        // return signature
         return EncryptionResponse.builder()
                 .cipher(encryptedContent)
                 .cipherHash(SecurityUtils.md5(encryptedContent))
@@ -163,6 +220,7 @@ public class ContentServiceImpl implements ContentService {
                 .tags(request.getTags())
                 .uid(user.getName())
                 .timeStamp(String.valueOf(System.currentTimeMillis()))
+                .ringSignature(ringSig)
                 .build();
     }
 
@@ -248,4 +306,23 @@ public class ContentServiceImpl implements ContentService {
         }
         return response.getMessage();
     }
+
+    @Override
+    public String[] getOrgMembers(String org) {
+        QueryOrgCCRequest request = QueryOrgCCRequest.builder()
+                .orgId(org)
+                .build();
+        ChaincodeResponse response =
+                chaincodeService.query(ChaincodeTypeEnum.TRUST_PLATFORM, "/org/queryOrg", request);
+        if (response.isFailed()) {
+            log.info("query for Org Members error: {}", response.getMessage());
+            throw new BaseException("query for Org Members error: " + response.getMessage());
+        }
+        System.out.println(response.getMessage());
+        OrgMembersResponse baseListResponse = JsonProviderHolder.JACKSON.parse(
+                response.getMessage(), new TypeReference<OrgMembersResponse>() {});
+        return baseListResponse.getUidSet();
+    }
 }
+
+
