@@ -28,6 +28,7 @@ public class ShareContentCCRequest extends BaseCCRequest {
     private String ip;
     private String location;
     private String policy;
+    private String org;
 
     @Override
     public String toString() {
@@ -38,6 +39,7 @@ public class ShareContentCCRequest extends BaseCCRequest {
                 ", ip='" + ip + '\'' +
                 ", location='" + location + '\'' +
                 ", policy='" + policy + '\'' +
+                ", org='" + org + '\'' +
                 '}';
     }
 }

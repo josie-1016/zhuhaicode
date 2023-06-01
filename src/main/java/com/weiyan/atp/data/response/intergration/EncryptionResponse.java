@@ -18,5 +18,6 @@ public class EncryptionResponse {
     private String uid;
     private List<String> tags;   //tags[0]:城市  tags[1]:系统   tags[2]:业务   tags[3]:文件名
     private String timeStamp;
+    private RingSignatureResponse ringSignature;
 }
 

@@ -6,7 +6,6 @@ import com.weiyan.atp.data.response.intergration.EncryptionResponse;
 import com.weiyan.atp.data.response.web.PlatContentsResponse;
 
 import javax.validation.constraints.NotEmpty;
-import java.io.IOException;
 
 /**
  * @author : 魏延thor
@@ -29,4 +28,6 @@ public interface ContentService {
 
     EncryptionResponse encContent(ShareContentRequest request);
     EncryptionResponse encContent2(ShareContentRequest request);
+
+    String[] getOrgMembers(String org);
 }
