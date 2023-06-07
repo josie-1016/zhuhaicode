@@ -18,6 +18,7 @@ import com.weiyan.atp.service.OrgRepositoryService;
 import com.weiyan.atp.utils.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.validation.annotation.Validated;
@@ -249,11 +250,23 @@ public class ContentController {
         PlatContentsResponse res = contentService.queryPlatContents(fromUserName, tag, pageSize, bookmark);
         return Result.okWithData(res);
     }
+//    组织外的人搜索文件
     @GetMapping("/threshold/list")
     public Result<PlatContentsResponse> queryThresholdContents(String orgName , String fileName ){
         PlatContentsResponse res = contentService.queryThresholdPlatContents(orgName,fileName);
+        System.out.println("fffffffffffffffffffffffffffffffff");
+        System.out.println(res);
         return  Result.okWithData(res);
     }
+//    组织内的人搜索文件
+    @GetMapping("/threshold/orgList")
+    public Result<String> queryOrgThresholdContents(String orgName , String fileName ,String fromUid) {
+        String res = contentService.queryOrgThresholdPlatContents(orgName,fileName,fromUid);
+        System.out.println("fffffffffffffffffffffffffffffffff");
+        System.out.println(res);
+        return Result.okWithData(res);
+    }
+
     @PostMapping("/testUpload")
     public Result<Object> encryptFile(@RequestBody @Validated ShareContentRequest request) throws IOException {
         //String fileNameHash = SecurityUtils.md5(request.getSharedfileName());
@@ -413,7 +426,8 @@ public class ContentController {
         System.out.println(orgName);
         System.out.println("2222222222222222222222222222222");
         //根据相对路径获取绝对路径
-        File dest = new File(new File(thresholdPath).getAbsolutePath()+ "/" + orgName+"/"+filename);
+        File dest = new File(new File(encryptDataPath).getAbsolutePath()+ "/" + orgName+"/"+filename);
+
         System.out.println(dest.getPath());
         if (!dest.getParentFile().exists()) {
             dest.getParentFile().mkdir();
@@ -425,6 +439,7 @@ public class ContentController {
                 StandardCharsets.UTF_8);
 
         request.setPlainContent(data);
+        request.setFileName(filename);
 
 //        EncryptionResponse encryptionResponse = contentService.encContent2(request);
         ThresholdResponse encrypytionResponse = contentService.encThresholdContent(request);
@@ -490,13 +505,13 @@ public class ContentController {
     }
     //下载明文申请，如果私钥个数不够就不让下载
     @GetMapping("/ThresholdDownload")
-    public void thresholdDownload(String userName , String orgName , String fileName ,HttpServletResponse response) throws IOException {
+    public void thresholdDownload(String userName , String orgName , String fileName ,HttpServletRequest request,HttpServletResponse response) throws IOException {
         //先判断文件够不够解密，不够解密就不返回并抛出异常门限不够
-        //返回加密后的密文
+
         orgRepositoryService.Thresholdmixdownload(orgName,userName,fileName);
 
         File dest = new File(new File(thresholdDecDataPath).getAbsolutePath()+"/"+userName+"/"+orgName+"/"+fileName);
-
+        System.out.println(dest);
         FileInputStream fis = new FileInputStream(dest);
         response.setContentType("application/force-download");
         response.setHeader("content-disposition","attachment;fileName="+ URLEncoder.encode(fileName,"UTF-8"));

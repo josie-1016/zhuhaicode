@@ -11,9 +11,8 @@ import com.weiyan.atp.data.bean.PlatContent;
 import com.weiyan.atp.data.bean.PlatOrg;
 import com.weiyan.atp.data.request.chaincode.dabe.DecryptContentCCRequest;
 import com.weiyan.atp.data.request.chaincode.dabe.EncryptContentCCRequest;
-import com.weiyan.atp.data.request.chaincode.plat.QueryContentsCCRequest;
-import com.weiyan.atp.data.request.chaincode.plat.QueryThresholdCCRequest;
-import com.weiyan.atp.data.request.chaincode.plat.ShareContentCCRequest;
+import com.weiyan.atp.data.request.chaincode.dabe.EncyptThresholdContentCCRequest;
+import com.weiyan.atp.data.request.chaincode.plat.*;
 import com.weiyan.atp.data.request.web.ShareContentRequest;
 import com.weiyan.atp.data.request.web.ThresholdFilesRequest;
 import com.weiyan.atp.data.response.chaincode.plat.BaseListResponse;
@@ -213,9 +212,11 @@ public class ContentServiceImpl implements ContentService {
 //                    .location(request.getLocation())
 //                    .policy(request.getPolicy())
                 .build();
+        System.out.println(request.getFileName());
+        System.out.println(shareContentCCRequest.getFileName());
         System.out.println("ccccccccccccccccc");
         ChaincodeResponse response = chaincodeService.invoke(
-                ChaincodeTypeEnum.TRUST_PLATFORM, "/common/shareMessageThreshold", shareContentCCRequest);
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/common/shareThreholdMessage", shareContentCCRequest);
         if (response.isFailed()) {
             log.info("invoke Threshold content to plat error: {}", response.getMessage());
             throw new BaseException("invoke Threshold content to plat error");
@@ -323,6 +324,26 @@ public class ContentServiceImpl implements ContentService {
                         .collect(Collectors.toList()))
                 .build();
     }
+
+    @Override
+    public String queryOrgThresholdPlatContents(String orgName, String fileName,String fromUid) {
+
+        QueryOrgThresholdFileCCRequest request = QueryOrgThresholdFileCCRequest.builder()
+                .orgId(orgName)
+                .fileName(fileName)
+                .fromUid(fromUid)
+                .build();
+        ChaincodeResponse response = chaincodeService.query(
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/org/queryThresholdFileApply", request);
+        if (response.isFailed()) {
+            log.info("query ThresholdContents from plat error: {}", response.getMessage());
+            throw new BaseException("query ThresholdContents from plat error: " + response.getMessage());
+        }
+        System.out.println(response.getMessage());
+
+        return response.getMessage();
+    }
+
     private String getEncryptedContent(ShareContentRequest request) {
         EncryptContentCCRequest ccRequest = EncryptContentCCRequest.builder()
                 .plainContent(request.getPlainContent())
@@ -344,17 +365,22 @@ public class ContentServiceImpl implements ContentService {
 
     private String getThresholdEncryptedContent(ThresholdFilesRequest request) {
 
-        ChaincodeResponse response1 =
-                chaincodeService.query(ChaincodeTypeEnum.TRUST_PLATFORM, "/org/queryOrgMen", request.getOrgName());
-        EncryptContentCCRequest ccRequest = EncryptContentCCRequest.builder()
+//        ChaincodeResponse response1 =
+//                chaincodeService.query(ChaincodeTypeEnum.TRUST_PLATFORM, "/org/queryOrgMen", request.getOrgName());
+//        EncyptThresholdContentCCRequest ccRequest = EncyptThresholdContentCCRequest.builder()
+//                .PlainContent(request.getPlainContent())
+//                .PubKey(response1.getMessage())
+//                .build();
+        EncryptThresholdContentCCRequest ccRequest = EncryptThresholdContentCCRequest.builder()
                 .plainContent(request.getPlainContent())
-                .policy(request.getOrgName())                              //policy:组织名称
-               .userName(response1.getMessage())                           //username:组织门限公钥
+                .orgId(request.getOrgName())
                 .build();
+        System.out.println("门限加密信息");
 
-
+        System.out.println("门限公钥信息");
+        System.out.println(orgRepositoryService.queryOrg(request.getOrgName()));
         ChaincodeResponse response =
-                chaincodeService.query(ChaincodeTypeEnum.DABE, "/common/encryptMen", ccRequest);
+                chaincodeService.query(ChaincodeTypeEnum.TRUST_PLATFORM, "/org/thresholdEncrypt", ccRequest);
         if (response.isFailed()) {
             log.info("query for encrypt error: {}", response.getMessage());
             throw new BaseException("query for encrypt error: " + response.getMessage());

@@ -34,8 +34,10 @@ public interface ContentService {
     EncryptionResponse encContent2(ShareContentRequest request);
 
     ThresholdResponse encThresholdContent(ThresholdFilesRequest request);
-
+//组织外用户搜索文件
     PlatContentsResponse queryThresholdPlatContents(String orgName ,String fileName);
+//组织内用户搜索文件
+    String queryOrgThresholdPlatContents(String orgName ,String fileName,String fromUid);
 
 
 }

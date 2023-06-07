@@ -17,6 +17,8 @@ public interface OrgRepositoryService {
 
     ChaincodeResponse applyCreateOrg2(CreateOrgRequest request);
 
+    ChaincodeResponse applyThresholdOrg(String orgName ,String uid);
+
     /**
      * 申请声明属性
      */
@@ -30,7 +32,9 @@ public interface OrgRepositoryService {
     void approveOrgApply(OrgApplyTypeEnum type, ApproveOrgApplyRequest request);
     void approveOrgApply2(OrgApplyTypeEnum type, ApproveOrgApplyRequest request);
 
-    void  approveThresholdFileApply(ApproveThresholdFileQApply request);
+    void approveThresholdApply(String orgName , String uid );
+
+
     /**
      * 提交自己的part pk
      */
@@ -42,11 +46,16 @@ public interface OrgRepositoryService {
      */
     void mixPartPk(OrgApplyTypeEnum type, String orgName, String attrName, String fileName);
     void mixPartPk2(OrgApplyTypeEnum type, String orgName, String attrName, String fileName);
+    //合公钥生成门限
+    void mixThresholdPartSk(String orgName ,String uid);
+
+    //合私钥解密
     void Thresholdmixdownload(String orgName ,String uid ,String fileName) throws IOException;
     PlatOrg queryOrg(@NotEmpty String orgName);
 
     PlatOrgApply queryOrgApply(@NotEmpty String orgName, OrgApplyTypeEnum type, String attrName);
 
     PlatOrgApply queryThresholdFileApply(String orgName ,String fileName , String fromUid);
+
 
 }

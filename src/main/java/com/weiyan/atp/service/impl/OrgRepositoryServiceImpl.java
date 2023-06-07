@@ -127,6 +127,22 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/org/createOrgApply", ccRequest);
     }
 
+    //门限用户申请生成公钥
+    @Override
+    public ChaincodeResponse applyThresholdOrg(String orgName, String uid) {
+        DABEUser user = dabeService.getUser(uid);
+        Preconditions.checkNotNull(user.getName());
+
+        CreateThresholdOrgCCRequst requst = CreateThresholdOrgCCRequst.builder()
+                .orgId(orgName)
+                .uid(uid)
+                .build();
+
+        CCUtils.sign(requst, getPriKey(uid));
+        return chaincodeService.invoke(
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/org/ThresholdOrgApply", requst);
+    }
+
     @Override
     public ChaincodeResponse applyDeclareOrgAttr(DeclareOrgAttrRequest request) {
         DABEUser user = dabeService.getUser(request.getFileName());
@@ -169,10 +185,11 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
 //                .build();
 //        CCUtils.sign(ccRequest, getPriKey(request.getFileName()));
         ApplyThresholdFileCCRequest ccRequest = ApplyThresholdFileCCRequest.builder()
-                .userName(request.getUserName())
-                .orgName(request.getOrgName())
+                .uid(request.getUserName())
+                .orgId(request.getOrgName())
                 .fileName(request.getFileName())
                 .build();
+        System.out.println("tttttttttttttttttttttttt");
         return chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/org/ThresholdFileApply", ccRequest);
     }
@@ -355,33 +372,27 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                     }
                 });
     }
-
+//同意生成门限公钥
     @Override
-    public void approveThresholdFileApply(ApproveThresholdFileQApply request) {
-        DABEUser user = dabeService.getUser(request.getUid());
+    public void approveThresholdApply(String orgName, String uid) {
+        DABEUser user = dabeService.getUser(uid);
         Preconditions.checkNotNull(user.getName());
-        String priKey = getPriKey(request.getUid());
+        String priKey = getPriKey(uid);
+        String part_sk = user.getOskMap().get(orgName).getOsk();
 
-        PlatOrgApply orgApply = queryThresholdFileApply(request.getOrgName(),request.getFileName(),request.getFromUid());
-        if (!orgApply.getFromUserName().equals(user.getName())) {
-//            ApproveOrgApplyCCRequest ccRequest1 = ApproveOrgApplyCCRequest.builder()
-//                    .orgId(request.getOrgName())
-//                    .uid(user.getName())
-//                    .attrName(request.getAttrName())
-//                    .build();
-            ApproveThresholdApplyCCRequest ccRequest1 = ApproveThresholdApplyCCRequest.builder()
-                            .orgId(request.getOrgName())
-                            .uid(request.getUid())
-                            .fileName(request.getFileName())
-                            .fromUid(request.getFromUid())
-                            .build();
-            CCUtils.sign(ccRequest1, priKey);
-            ChaincodeResponse response1 = chaincodeService.invoke(
-                    ChaincodeTypeEnum.TRUST_PLATFORM, "/org/approveThresholdApply", ccRequest1);
-            if (response1.isFailed()) {
-                throw new BaseException("approve apply in plat error:" + response1.getMessage());
-            }
+        ApproveThresholdOrgCCRequest request = ApproveThresholdOrgCCRequest.builder()
+                .partSk(part_sk)
+                .orgId(orgName)
+                .uid(uid)
+                .build();
+        CCUtils.sign(request,priKey);
+        ChaincodeResponse response = chaincodeService.invoke(
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/org/approveThresholdOrgApply", request);
+        if (response.isFailed()) {
+            throw new BaseException("submit thresholdSK to " + orgName
+                    + " error: " + response.getMessage());
         }
+
     }
 
     /**
@@ -466,9 +477,9 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
 
     @Override
     public void submitThresholdPartPK(String orgName, String fileName, String uid, String fromUid) {
-        DABEUser user = dabeService.getUser(fileName);
+        DABEUser user = dabeService.getUser(uid);
         Preconditions.checkNotNull(user.getName());
-        String priKey = getPriKey(fileName);
+        String priKey = getPriKey(uid);
         SubmitThresholdPartOSKCCRequest request = SubmitThresholdPartOSKCCRequest.builder()
                 .orgId(orgName)
                 .fileName(fileName)
@@ -478,7 +489,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                 .build();
         CCUtils.sign(request, priKey);
         ChaincodeResponse response2 = chaincodeService.invoke(
-                ChaincodeTypeEnum.TRUST_PLATFORM, "/org/submitThresholdPartOSK", request);
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/org/approveandsubmitThresholdPartOSK", request);
         if (response2.isFailed()) {
             throw new BaseException("submit part pk in plat error:" + response2.getMessage());
         }
@@ -624,32 +635,53 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
     }
 
     @Override
+    public void mixThresholdPartSk(String orgName, String uid) {
+        DABEUser user = dabeService.getUser(uid);
+        Preconditions.checkNotNull(user.getName());
+        String priKey = getPriKey(uid);
+
+        CreateThresholdOrgCCRequst ccRequst = CreateThresholdOrgCCRequst.builder()
+                .uid(uid)
+                .orgId(orgName)
+                .build();
+        CCUtils.sign(ccRequst,priKey);
+        ChaincodeResponse response = chaincodeService.invoke(
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/org/mixPartOSKForThresholdPub", ccRequst);
+        if (response.isFailed()) {
+            throw new BaseException(response.getMessage());
+        }
+    }
+
+    @Override
     public void Thresholdmixdownload(String orgName, String uid, String fileName) throws IOException {
         DABEUser user = dabeService.getUser(uid);
         Preconditions.checkNotNull(user.getName());
         String priKey = getPriKey(uid);
+        String cipher = FileUtils.readFileToString(new File(thresholdEncDataPath+"/"+orgName+"/"+fileName), StandardCharsets.UTF_8);
         MixThresholdPartOSKCCRequest request = MixThresholdPartOSKCCRequest.builder()
+                .cipherContent(cipher)
                 .orgId(orgName)
                 .fileName(fileName)
                 .uid(uid)
                 .build();
         CCUtils.sign(request, priKey);
         ChaincodeResponse response = chaincodeService.invoke(
-                ChaincodeTypeEnum.TRUST_PLATFORM, "/org/mixPartOSKForThreshold", request);
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/org/decryptThreshold", request);
         if (response.isFailed()) {
             throw new BaseException(response.getMessage());
         }
 
-        String cipher = FileUtils.readFileToString(new File(thresholdEncDataPath+"/"+orgName+"/"+fileName), StandardCharsets.UTF_8);
-        DecryptThresholdContentCCRequest thresholdContentCCRequest = new DecryptThresholdContentCCRequest(cipher,response.getMessage());
-        ChaincodeResponse response1 = chaincodeService.query(ChaincodeTypeEnum.DABE,"/common/decryptThreshold",thresholdContentCCRequest);
 
+//        DecryptThresholdContentCCRequest thresholdContentCCRequest = new DecryptThresholdContentCCRequest(cipher,response.getMessage());
+//        ChaincodeResponse response1 = chaincodeService.query(ChaincodeTypeEnum.DABE,"/common/decryptThreshold",thresholdContentCCRequest);
+//
         File dest = new File(new File(thresholdDecDataPath).getAbsolutePath()+ "/" + uid+"/"+orgName+"/"+fileName);
         System.out.println(dest.getPath());
-        if (!dest.getParentFile().exists()) {
-            dest.getParentFile().mkdir();
-        }
-        FileUtils.write(dest,response1.getMessage(),StandardCharsets.UTF_8);
+//        if (!dest.getParentFile().exists()) {
+//            dest.getParentFile().mkdir();
+//        }
+//        FileUtils.write(dest,response1.getMessage(),StandardCharsets.UTF_8);
+        FileUtils.write(dest,response.getMessage(),StandardCharsets.UTF_8);
     }
 
 

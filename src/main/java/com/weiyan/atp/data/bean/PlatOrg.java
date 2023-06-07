@@ -17,5 +17,5 @@ public class PlatOrg {
     private Integer n;
     private String opk;
 
-    private String thresholdPublic;
+    private String ThresholdPub;
 }

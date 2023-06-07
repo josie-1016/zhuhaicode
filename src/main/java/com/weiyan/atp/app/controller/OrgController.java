@@ -55,9 +55,10 @@ public class OrgController {
 
     //门限申请
     @PostMapping("/apply/threshold")
-    public Result<Object> applyThreshold(ThresholdApplyRequest request) {
+    public Result<Object> applyThreshold(@RequestBody ThresholdApplyRequest request) {
         return orgRepositoryService.applyThresholdFile(request).getResult(str -> str);
     }
+
     /**
      * 审批/同意声明属性
      * 自动提交分享给其他人的秘密
@@ -69,9 +70,9 @@ public class OrgController {
     }
 //    同意申请下载文件
     @PostMapping("apply/ThresholdFile/approval")
-    public Result<Object> approvalThresholdFileApply(@RequestBody ApproveThresholdFileQApply request){
+    public Result<Object> approvalThresholdFileApply(String orgName , String fileName ,String uid ,String fromUid){
         //调用门限申请
-        orgRepositoryService.approveThresholdFileApply(request);
+        orgRepositoryService.submitThresholdPartPK(orgName,fileName,uid,fromUid);
         return Result.success();
     }
 
@@ -93,6 +94,18 @@ public class OrgController {
         orgRepositoryService.submitPartPk2(OrgApplyTypeEnum.valueOf(type), orgName, fileName, attrName);
         return Result.success();
     }
+    //同意门限PublicK生成
+    @PostMapping("/threshold/approve-part-sk")
+    public Result<Object> submitThresholdPartSk(String orgName , String userName){
+        orgRepositoryService.approveThresholdApply(orgName,userName);
+        return Result.success();
+    }
+    //申请门限publicK生成
+    @PostMapping("/threshold/apply-part-sk")
+    public Result<Object> applyThresholdPartSk(String orgName ,String userName){
+        orgRepositoryService.applyThresholdOrg(orgName,userName);
+        return Result.success();
+    }
 
     /**
      * 让合约整合part pk生成组织公钥或属性公钥
@@ -101,6 +114,11 @@ public class OrgController {
     @PostMapping("/complete-pk")
     public Result<Object> mixPartPk(String type, String orgName, String attrName, String fileName) {
         orgRepositoryService.mixPartPk2(OrgApplyTypeEnum.valueOf(type), orgName, attrName, fileName);
+        return Result.success();
+    }
+    @PostMapping("/Threshold/complete-pk")
+    public  Result<Object> mixThresholdPartPk(String orgName,String userName){
+        orgRepositoryService.mixThresholdPartSk(orgName,userName);
         return Result.success();
     }
 

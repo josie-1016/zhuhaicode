@@ -10,7 +10,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @JsonPropertyOrder(alphabetic = true)
 public class ApplyThresholdFileCCRequest extends BaseCCRequest {
-    private String orgName;
+    private String orgId;
     private String fileName;
-    private String userName;
+    private String uid;
 }
