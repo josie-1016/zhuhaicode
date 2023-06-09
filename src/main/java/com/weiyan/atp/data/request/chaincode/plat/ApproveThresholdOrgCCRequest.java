@@ -9,9 +9,8 @@ import lombok.experimental.SuperBuilder;
 @Data
 @SuperBuilder
 @JsonPropertyOrder(alphabetic = true)
-public class MixThresholdPartOSKCCRequest extends BaseCCRequest{
+public class ApproveThresholdOrgCCRequest extends  BaseCCRequest{
     private String orgId;
-    private String fileName;
     private String uid;
-    private String cipherContent;
+    private String partSk;
 }
