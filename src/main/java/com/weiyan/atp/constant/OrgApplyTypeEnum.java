@@ -12,6 +12,8 @@ import java.util.Arrays;
 public enum OrgApplyTypeEnum {
     CREATION("/org/approveOrgApply", "/org/queryOrgApply", 0),
     ATTRIBUTE("/org/approveOrgApply", "/org/queryOrgApply", 1),
+
+//    THRESHOLD("/org/approveThresholdApply","/org/queryThresholdApply",2),
     ;
 
     private String approveFunctionName;

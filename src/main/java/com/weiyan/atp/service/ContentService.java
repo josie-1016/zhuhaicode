@@ -1,8 +1,12 @@
 package com.weiyan.atp.service;
 
 import com.weiyan.atp.data.bean.ChaincodeResponse;
+import com.weiyan.atp.data.bean.PlatContent;
 import com.weiyan.atp.data.request.web.ShareContentRequest;
+import com.weiyan.atp.data.request.web.ThresholdFilesRequest;
+import com.weiyan.atp.data.request.web.UploadFileRequest;
 import com.weiyan.atp.data.response.intergration.EncryptionResponse;
+import com.weiyan.atp.data.response.intergration.ThresholdResponse;
 import com.weiyan.atp.data.response.web.PlatContentsResponse;
 
 import javax.validation.constraints.NotEmpty;
@@ -13,6 +17,7 @@ import javax.validation.constraints.NotEmpty;
  */
 public interface ContentService {
     void shareContent(ShareContentRequest request);
+
 
     String decryptContent(@NotEmpty String cipher, @NotEmpty String fileName);
 
@@ -25,9 +30,14 @@ public interface ContentService {
      */
     PlatContentsResponse queryPlatContents(String fromUserName, String tag,
                                            int pageSize, String bookmark);
-
     EncryptionResponse encContent(ShareContentRequest request);
     EncryptionResponse encContent2(ShareContentRequest request);
 
     String[] getOrgMembers(String org);
+
+    ThresholdResponse encThresholdContent(ThresholdFilesRequest request);
+//组织外用户搜索文件
+    PlatContentsResponse queryThresholdPlatContents(String orgName ,String fileName);
+//组织内用户搜索文件
+    String queryOrgThresholdPlatContents(String orgName ,String fileName,String fromUid);
 }

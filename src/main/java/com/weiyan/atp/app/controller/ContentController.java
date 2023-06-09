@@ -7,27 +7,21 @@ import com.weiyan.atp.data.bean.Result;
 import com.weiyan.atp.data.request.web.DecryptContentRequest;
 import com.weiyan.atp.data.request.web.RevokeUserAttrRequest;
 import com.weiyan.atp.data.request.web.ShareContentRequest;
+import com.weiyan.atp.data.request.web.ThresholdFilesRequest;
 import com.weiyan.atp.data.response.intergration.EncryptionResponse;
 import com.weiyan.atp.data.response.intergration.RingSignatureResponse;
+import com.weiyan.atp.data.response.intergration.ThresholdResponse;
 import com.weiyan.atp.data.response.web.PlatContentsResponse;
 import com.weiyan.atp.service.AttrService;
 import com.weiyan.atp.service.ContentService;
 import com.weiyan.atp.service.DABEService;
 import com.weiyan.atp.utils.*;
+import com.weiyan.atp.service.OrgRepositoryService;
+import com.weiyan.atp.utils.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
+import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.configurationprocessor.json.JSONArray;
-import org.springframework.boot.configurationprocessor.json.JSONException;
-import org.springframework.boot.configurationprocessor.json.JSONObject;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -36,9 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
@@ -63,6 +55,8 @@ public class ContentController {
 
     private final DABEService dabeService;
 
+    private final OrgRepositoryService orgRepositoryService ;
+
     @Value("${atp.devMode.baseUrl}")
     private String baseUrl;
 
@@ -75,14 +69,25 @@ public class ContentController {
     @Value("${atp.path.ringSigData}")
     private String ringSigDataPath;
 
+    @Value("atp/orgThreshold/enc/")
+    private String thresholdEncDataPath;
+
+    @Value("atp/orgThreshold/dec/")
+    private String thresholdDecDataPath;
+
     @Value("${atp.path.cipherData}")
     private String cipherDataPath;
 
     @Value("${atp.path.dabeUser}")
     private String userPath;
 
+
     @Value("${atp.path.publicKey}")
     private String pubKeyPath;
+
+    @Value("atp/orgThreshold/")
+    private  String thresholdPath;
+
 
     @Value("${spring.datasource.url}")
     private String mysqlUrl;
@@ -98,10 +103,11 @@ public class ContentController {
 
     private static int cnt = 0;
 
-    public ContentController(ContentService contentService, AttrService attrService, DABEService dabeService) {
+    public ContentController(ContentService contentService, AttrService attrService, DABEService dabeService, OrgRepositoryService orgRepositoryService) {
         this.contentService = contentService;
         this.attrService = attrService;
         this.dabeService = dabeService;
+        this.orgRepositoryService = orgRepositoryService;
     }
 
     @PostMapping("/")
@@ -258,6 +264,22 @@ public class ContentController {
         PlatContentsResponse res = contentService.queryPlatContents(fromUserName, tag, pageSize, bookmark);
         return Result.okWithData(res);
     }
+//    组织外的人搜索文件
+    @GetMapping("/threshold/list")
+    public Result<PlatContentsResponse> queryThresholdContents(String orgName , String fileName ){
+        PlatContentsResponse res = contentService.queryThresholdPlatContents(orgName,fileName);
+        System.out.println("fffffffffffffffffffffffffffffffff");
+        System.out.println(res);
+        return  Result.okWithData(res);
+    }
+//    组织内的人搜索文件
+    @GetMapping("/threshold/orgList")
+    public Result<String> queryOrgThresholdContents(String orgName , String fileName ,String fromUid) {
+        String res = contentService.queryOrgThresholdPlatContents(orgName,fileName,fromUid);
+        System.out.println("fffffffffffffffffffffffffffffffff");
+        System.out.println(res);
+        return Result.okWithData(res);
+    }
 
     @PostMapping("/testUpload")
     public Result<Object> encryptFile(@RequestBody @Validated ShareContentRequest request) throws IOException {
@@ -309,6 +331,7 @@ public class ContentController {
                 StandardCharsets.UTF_8);
         request.setPlainContent(data);
         request.setSharedFileName(filename);
+
         EncryptionResponse encryptionResponse = contentService.encContent2(request);
 
         FileUtils.write(new File(encryptDataPath +uploader+"/"+ filename), encryptionResponse.getCipher(),
@@ -455,6 +478,48 @@ public class ContentController {
         return Result.okWithData(null);
     }
 
+
+    //上传门限文件
+    @PostMapping("/thresholdUpload")
+    public Result<Object> thresholdUpload( ThresholdFilesRequest request ) throws IOException {
+        System.out.println("11111111111111111111111111111");
+        MultipartFile file = request.getFile();
+        if(file.isEmpty()){
+            return Result.internalError("file is empty");
+        }
+        //获取文件的原始名
+        String filename = file.getOriginalFilename();
+        System.out.println(filename);
+
+        //获取组织名称
+        String orgName = request.getOrgName();
+        System.out.println(orgName);
+        System.out.println("2222222222222222222222222222222");
+        //根据相对路径获取绝对路径
+        File dest = new File(new File(encryptDataPath).getAbsolutePath()+ "/" + orgName+"/"+filename);
+
+        System.out.println(dest.getPath());
+        if (!dest.getParentFile().exists()) {
+            dest.getParentFile().mkdir();
+        }
+        FileUtils.copyInputStreamToFile(file.getInputStream(), dest);
+        //读取明文
+        String data = FileUtils.readFileToString(
+                dest,
+                StandardCharsets.UTF_8);
+
+        request.setPlainContent(data);
+        request.setFileName(filename);
+
+//        EncryptionResponse encryptionResponse = contentService.encContent2(request);
+        ThresholdResponse encrypytionResponse = contentService.encThresholdContent(request);
+        FileUtils.write(new File(thresholdEncDataPath +request.getOrgName()+"/"+ filename), encrypytionResponse.getCipher(),
+                StandardCharsets.UTF_8);
+
+        return Result.success();
+    }
+
+
     //下载解密后的原文
     @GetMapping("/download")
     public  void download(String fileName, String sharedUser,HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -506,7 +571,21 @@ public class ContentController {
         //FileUtils.copyFile(dest,os);
         //return Result.success();
     }
+    //下载明文申请，如果私钥个数不够就不让下载
+    @GetMapping("/ThresholdDownload")
+    public void thresholdDownload(String userName , String orgName , String fileName ,HttpServletRequest request,HttpServletResponse response) throws IOException {
+        //先判断文件够不够解密，不够解密就不返回并抛出异常门限不够
 
+        orgRepositoryService.Thresholdmixdownload(orgName,userName,fileName);
+
+        File dest = new File(new File(thresholdDecDataPath).getAbsolutePath()+"/"+userName+"/"+orgName+"/"+fileName);
+        System.out.println(dest);
+        FileInputStream fis = new FileInputStream(dest);
+        response.setContentType("application/force-download");
+        response.setHeader("content-disposition","attachment;fileName="+ URLEncoder.encode(fileName,"UTF-8"));
+        ServletOutputStream os = response.getOutputStream();
+        FileCopyUtils.copy(fis,os);
+    }
 
     //撤销用户所有属性
     public void revokeUserAttr(String userName,String msg) {

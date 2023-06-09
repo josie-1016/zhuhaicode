@@ -12,17 +12,9 @@ import com.weiyan.atp.data.bean.DABEUser.OSKPart;
 import com.weiyan.atp.data.bean.PlatOrg;
 import com.weiyan.atp.data.bean.PlatOrgApply;
 import com.weiyan.atp.data.bean.PlatUser;
-import com.weiyan.atp.data.request.chaincode.plat.ApproveOrgApplyCCRequest;
-import com.weiyan.atp.data.request.chaincode.plat.CreateOrgCCRequest;
-import com.weiyan.atp.data.request.chaincode.plat.DeclareOrgAttrCCRequest;
-import com.weiyan.atp.data.request.chaincode.plat.MixPartPKCCRequest;
-import com.weiyan.atp.data.request.chaincode.plat.QueryOrgApplyCCRequest;
-import com.weiyan.atp.data.request.chaincode.plat.SubmitOrgPartPKCCRequest;
-import com.weiyan.atp.data.request.chaincode.plat.SubmitOrgShareCCRequest;
-import com.weiyan.atp.data.request.web.ApproveOrgApplyRequest;
-import com.weiyan.atp.data.request.web.CreateOrgRequest;
-import com.weiyan.atp.data.request.web.DeclareOrgAttrRequest;
-import com.weiyan.atp.data.request.web.QueryUserRequest;
+import com.weiyan.atp.data.request.chaincode.dabe.DecryptThresholdContentCCRequest;
+import com.weiyan.atp.data.request.chaincode.plat.*;
+import com.weiyan.atp.data.request.web.*;
 import com.weiyan.atp.service.ChaincodeService;
 import com.weiyan.atp.service.DABEService;
 import com.weiyan.atp.service.OrgRepositoryService;
@@ -42,6 +34,7 @@ import org.springframework.validation.annotation.Validated;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivateKey;
 import java.util.ArrayList;
@@ -71,6 +64,11 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
     @Value("${atp.path.publicKey}")
     private String pubKeyPath;
 
+    @Value("atp/orgThreshold/enc/")
+    private String thresholdEncDataPath;
+
+    @Value("atp/orgThreshold/dec/")
+    private String thresholdDecDataPath;
     public OrgRepositoryServiceImpl(ChaincodeService chaincodeService, DABEService dabeService,
                                     UserRepositoryService userRepositoryService) {
         this.chaincodeService = chaincodeService;
@@ -130,6 +128,22 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/org/createOrgApply", ccRequest);
     }
 
+    //门限用户申请生成公钥
+    @Override
+    public ChaincodeResponse applyThresholdOrg(String orgName, String uid) {
+        DABEUser user = dabeService.getUser(uid);
+        Preconditions.checkNotNull(user.getName());
+
+        CreateThresholdOrgCCRequst requst = CreateThresholdOrgCCRequst.builder()
+                .orgId(orgName)
+                .uid(uid)
+                .build();
+
+        CCUtils.sign(requst, getPriKey(uid));
+        return chaincodeService.invoke(
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/org/ThresholdOrgApply", requst);
+    }
+
     @Override
     public ChaincodeResponse applyDeclareOrgAttr(DeclareOrgAttrRequest request) {
         DABEUser user = dabeService.getUser(request.getFileName());
@@ -159,6 +173,27 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
         CCUtils.SM2sign(ccRequest,request.getFileName(),user.getName());
         return chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/org/declareAttrApply", ccRequest);
+    }
+
+    @Override
+    public ChaincodeResponse applyThresholdFile(ThresholdApplyRequest request) {
+        DABEUser user = dabeService.getUser(request.getUserName());
+        Preconditions.checkNotNull(user.getName());
+
+//        DeclareOrgAttrCCRequest ccRequest = DeclareOrgAttrCCRequest.builder()
+//                .orgId(request.getOrgName())
+//                .attrName(request.getFileName())
+//                .uid(user.getName())
+//                .build();
+//        CCUtils.sign(ccRequest, getPriKey(request.getFileName()));
+        ApplyThresholdFileCCRequest ccRequest = ApplyThresholdFileCCRequest.builder()
+                .uid(request.getUserName())
+                .orgId(request.getOrgName())
+                .fileName(request.getFileName())
+                .build();
+        System.out.println("tttttttttttttttttttttttt");
+        return chaincodeService.invoke(
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/org/ThresholdFileApply", ccRequest);
     }
 
     public String getPriKey(String fileName) {
@@ -341,6 +376,28 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                     }
                 });
     }
+//同意生成门限公钥
+    @Override
+    public void approveThresholdApply(String orgName, String uid) {
+        DABEUser user = dabeService.getUser(uid);
+        Preconditions.checkNotNull(user.getName());
+        String priKey = getPriKey(uid);
+        String part_sk = user.getOskMap().get(orgName).getOsk();
+
+        ApproveThresholdOrgCCRequest request = ApproveThresholdOrgCCRequest.builder()
+                .partSk(part_sk)
+                .orgId(orgName)
+                .uid(uid)
+                .build();
+        CCUtils.sign(request,priKey);
+        ChaincodeResponse response = chaincodeService.invoke(
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/org/approveThresholdOrgApply", request);
+        if (response.isFailed()) {
+            throw new BaseException("submit thresholdSK to " + orgName
+                    + " error: " + response.getMessage());
+        }
+
+    }
 
     /**
      * 提交part pk
@@ -414,6 +471,26 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
         CCUtils.SM2sign(request,request.getUid(),user.getName());
         ChaincodeResponse response2 = chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/org/submitPartPK", request);
+        if (response2.isFailed()) {
+            throw new BaseException("submit part pk in plat error:" + response2.getMessage());
+        }
+    }
+
+    @Override
+    public void submitThresholdPartPK(String orgName, String fileName, String uid, String fromUid) {
+        DABEUser user = dabeService.getUser(uid);
+        Preconditions.checkNotNull(user.getName());
+        String priKey = getPriKey(uid);
+        SubmitThresholdPartOSKCCRequest request = SubmitThresholdPartOSKCCRequest.builder()
+                .orgId(orgName)
+                .fileName(fileName)
+                .uid(uid)
+                .fromUid(fromUid)
+                .partPK(user.getOskMap().get(orgName).getOsk())
+                .build();
+        CCUtils.sign(request, priKey);
+        ChaincodeResponse response2 = chaincodeService.invoke(
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/org/approveandsubmitThresholdPartOSK", request);
         if (response2.isFailed()) {
             throw new BaseException("submit part pk in plat error:" + response2.getMessage());
         }
@@ -556,6 +633,56 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
         }
     }
 
+    @Override
+    public void mixThresholdPartSk(String orgName, String uid) {
+        DABEUser user = dabeService.getUser(uid);
+        Preconditions.checkNotNull(user.getName());
+        String priKey = getPriKey(uid);
+
+        CreateThresholdOrgCCRequst ccRequst = CreateThresholdOrgCCRequst.builder()
+                .uid(uid)
+                .orgId(orgName)
+                .build();
+        CCUtils.sign(ccRequst,priKey);
+        ChaincodeResponse response = chaincodeService.invoke(
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/org/mixPartOSKForThresholdPub", ccRequst);
+        if (response.isFailed()) {
+            throw new BaseException(response.getMessage());
+        }
+    }
+
+    @Override
+    public void Thresholdmixdownload(String orgName, String uid, String fileName) throws IOException {
+        DABEUser user = dabeService.getUser(uid);
+        Preconditions.checkNotNull(user.getName());
+        String priKey = getPriKey(uid);
+        String cipher = FileUtils.readFileToString(new File(thresholdEncDataPath+"/"+orgName+"/"+fileName), StandardCharsets.UTF_8);
+        MixThresholdPartOSKCCRequest request = MixThresholdPartOSKCCRequest.builder()
+                .cipherContent(cipher)
+                .orgId(orgName)
+                .fileName(fileName)
+                .uid(uid)
+                .build();
+        CCUtils.sign(request, priKey);
+        ChaincodeResponse response = chaincodeService.invoke(
+                ChaincodeTypeEnum.TRUST_PLATFORM, "/org/decryptThreshold", request);
+        if (response.isFailed()) {
+            throw new BaseException(response.getMessage());
+        }
+
+
+//        DecryptThresholdContentCCRequest thresholdContentCCRequest = new DecryptThresholdContentCCRequest(cipher,response.getMessage());
+//        ChaincodeResponse response1 = chaincodeService.query(ChaincodeTypeEnum.DABE,"/common/decryptThreshold",thresholdContentCCRequest);
+//
+        File dest = new File(new File(thresholdDecDataPath).getAbsolutePath()+ "/" + uid+"/"+orgName+"/"+fileName);
+        System.out.println(dest.getPath());
+//        if (!dest.getParentFile().exists()) {
+//            dest.getParentFile().mkdir();
+//        }
+//        FileUtils.write(dest,response1.getMessage(),StandardCharsets.UTF_8);
+        FileUtils.write(dest,response.getMessage(),StandardCharsets.UTF_8);
+    }
+
 
     @Override
     public PlatOrg queryOrg(@NotEmpty String orgName) {
@@ -585,4 +712,18 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
         System.out.println(response.getMessage());
         return JsonProviderHolder.JACKSON.parse(response.getMessage(), PlatOrgApply.class);
     }
+
+    @Override
+    public PlatOrgApply queryThresholdFileApply(String orgName, String fileName, String fromUid) {
+        ChaincodeResponse response = chaincodeService.query(ChaincodeTypeEnum.TRUST_PLATFORM,
+                "/org/queryThresholdApply",
+                QueryThresholdFileCCRequest.builder()
+                        .orgId(orgName)
+                        .fileName(fileName)
+                        .fromUid(fromUid)
+                        .build());
+        return JsonProviderHolder.JACKSON.parse(response.getMessage(), PlatOrgApply.class);
+    }
+
+
 }
