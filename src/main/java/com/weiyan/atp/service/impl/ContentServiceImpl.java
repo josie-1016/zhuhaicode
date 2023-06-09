@@ -234,6 +234,15 @@ public class ContentServiceImpl implements ContentService {
         String encryptedContent = getThresholdEncryptedContent(request);
 
         PlatOrg platOrg = orgRepositoryService.queryOrg(request.getOrgName());
+//        QueryOrgCCRequest orgCCRequestequest = QueryOrgCCRequest.builder()
+//                .orgId(request.getOrgName())
+//                .build();
+//        ChaincodeResponse responseOrg =
+//                chaincodeService.query(ChaincodeTypeEnum.TRUST_PLATFORM, "/org/queryOrg", orgCCRequestequest);
+//        if (responseOrg.isFailed()) {
+//            throw new BaseException("no org exists for " + request.getOrgName());
+//        }
+//        PlatOrg platOrg = JsonProviderHolder.JACKSON.parse(responseOrg.getMessage(), PlatOrg.class);
         Preconditions.checkNotNull(platOrg.getOrgId());
         ShareContentCCRequest shareContentCCRequest = ShareContentCCRequest.builder()
                 .uid(platOrg.getOrgId())

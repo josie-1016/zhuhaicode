@@ -139,7 +139,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                 .uid(uid)
                 .build();
 
-        CCUtils.sign(requst, getPriKey(uid));
+        CCUtils.SM2sign(requst, uid,user.getName());
         return chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/org/ThresholdOrgApply", requst);
     }
@@ -389,7 +389,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                 .orgId(orgName)
                 .uid(uid)
                 .build();
-        CCUtils.sign(request,priKey);
+        CCUtils.SM2sign(request,uid,user.getName());
         ChaincodeResponse response = chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/org/approveThresholdOrgApply", request);
         if (response.isFailed()) {
@@ -488,7 +488,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                 .fromUid(fromUid)
                 .partPK(user.getOskMap().get(orgName).getOsk())
                 .build();
-        CCUtils.sign(request, priKey);
+        CCUtils.SM2sign(request,uid,user.getName());
         ChaincodeResponse response2 = chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/org/approveandsubmitThresholdPartOSK", request);
         if (response2.isFailed()) {
@@ -637,13 +637,12 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
     public void mixThresholdPartSk(String orgName, String uid) {
         DABEUser user = dabeService.getUser(uid);
         Preconditions.checkNotNull(user.getName());
-        String priKey = getPriKey(uid);
 
         CreateThresholdOrgCCRequst ccRequst = CreateThresholdOrgCCRequst.builder()
                 .uid(uid)
                 .orgId(orgName)
                 .build();
-        CCUtils.sign(ccRequst,priKey);
+        CCUtils.SM2sign(ccRequst,uid,user.getName());
         ChaincodeResponse response = chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/org/mixPartOSKForThresholdPub", ccRequst);
         if (response.isFailed()) {
@@ -655,7 +654,6 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
     public void Thresholdmixdownload(String orgName, String uid, String fileName) throws IOException {
         DABEUser user = dabeService.getUser(uid);
         Preconditions.checkNotNull(user.getName());
-        String priKey = getPriKey(uid);
         String cipher = FileUtils.readFileToString(new File(thresholdEncDataPath+"/"+orgName+"/"+fileName), StandardCharsets.UTF_8);
         MixThresholdPartOSKCCRequest request = MixThresholdPartOSKCCRequest.builder()
                 .cipherContent(cipher)
@@ -663,7 +661,7 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
                 .fileName(fileName)
                 .uid(uid)
                 .build();
-        CCUtils.sign(request, priKey);
+        CCUtils.SM2sign(request, uid,user.getName());
         ChaincodeResponse response = chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/org/decryptThreshold", request);
         if (response.isFailed()) {
@@ -686,9 +684,19 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
 
     @Override
     public PlatOrg queryOrg(@NotEmpty String orgName) {
-        ChaincodeResponse response = chaincodeService.query(
-            ChaincodeTypeEnum.TRUST_PLATFORM, "/org/queryOrg",
-            new ArrayList<>(Collections.singletonList(orgName)));
+//        ChaincodeResponse response = chaincodeService.query(
+//            ChaincodeTypeEnum.TRUST_PLATFORM, "/org/queryOrg",
+//            new ArrayList<>(Collections.singletonList(orgName)));
+//        if (response.isFailed()) {
+//            throw new BaseException("no org exists for " + orgName);
+//        }
+//        return JsonProviderHolder.JACKSON.parse(response.getMessage(), PlatOrg.class);
+
+        QueryOrgCCRequest orgCCRequestequest = QueryOrgCCRequest.builder()
+                .orgId(orgName)
+                .build();
+        ChaincodeResponse response =
+                chaincodeService.query(ChaincodeTypeEnum.TRUST_PLATFORM, "/org/queryOrg", orgCCRequestequest);
         if (response.isFailed()) {
             throw new BaseException("no org exists for " + orgName);
         }
