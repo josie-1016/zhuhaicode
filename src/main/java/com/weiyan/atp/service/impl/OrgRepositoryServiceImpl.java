@@ -5,13 +5,9 @@ import com.weiyan.atp.constant.BaseException;
 import com.weiyan.atp.constant.ChaincodeTypeEnum;
 import com.weiyan.atp.constant.OrgApplyStatusEnum;
 import com.weiyan.atp.constant.OrgApplyTypeEnum;
-import com.weiyan.atp.data.bean.ChaincodeResponse;
-import com.weiyan.atp.data.bean.DABEUser;
+import com.weiyan.atp.data.bean.*;
 import com.weiyan.atp.data.bean.DABEUser.ASKPart;
 import com.weiyan.atp.data.bean.DABEUser.OSKPart;
-import com.weiyan.atp.data.bean.PlatOrg;
-import com.weiyan.atp.data.bean.PlatOrgApply;
-import com.weiyan.atp.data.bean.PlatUser;
 import com.weiyan.atp.data.request.chaincode.dabe.DecryptThresholdContentCCRequest;
 import com.weiyan.atp.data.request.chaincode.plat.*;
 import com.weiyan.atp.data.request.web.*;
@@ -668,17 +664,16 @@ public class OrgRepositoryServiceImpl implements OrgRepositoryService {
             throw new BaseException(response.getMessage());
         }
 
-
 //        DecryptThresholdContentCCRequest thresholdContentCCRequest = new DecryptThresholdContentCCRequest(cipher,response.getMessage());
 //        ChaincodeResponse response1 = chaincodeService.query(ChaincodeTypeEnum.DABE,"/common/decryptThreshold",thresholdContentCCRequest);
 //
-        File dest = new File(new File(thresholdDecDataPath).getAbsolutePath()+ "/" + uid+"/"+orgName+"/"+fileName);
-        System.out.println(dest.getPath());
-//        if (!dest.getParentFile().exists()) {
-//            dest.getParentFile().mkdir();
-//        }
-//        FileUtils.write(dest,response1.getMessage(),StandardCharsets.UTF_8);
-        FileUtils.write(dest,response.getMessage(),StandardCharsets.UTF_8);
+//        File dest = new File(new File(thresholdDecDataPath).getAbsolutePath()+ "/" + uid+"/"+orgName+"/"+fileName);
+//        System.out.println(dest.getPath());
+////        if (!dest.getParentFile().exists()) {
+////            dest.getParentFile().mkdir();
+////        }
+////        FileUtils.write(dest,response1.getMessage(),StandardCharsets.UTF_8);
+//        FileUtils.write(dest,response.getMessage(),StandardCharsets.UTF_8);
     }
 
 

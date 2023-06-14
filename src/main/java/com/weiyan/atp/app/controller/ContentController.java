@@ -69,6 +69,9 @@ public class ContentController {
     @Value("${atp.path.ringSigData}")
     private String ringSigDataPath;
 
+    @Value("${atp.path.thresholdDataPath}")
+    private String thresholdDataPath;
+
     @Value("atp/orgThreshold/enc/")
     private String thresholdEncDataPath;
 
@@ -344,39 +347,39 @@ public class ContentController {
         System.out.println(ringSig);
 
 
-        try {
-            //加载驱动
-            Class.forName(Driver);
-
-
-            Connection conn = DriverManager.getConnection(mysqlUrl, mysqlUser, mysqlPassword);	//创建connection对象,用来连接数据库
-            if(!conn.isClosed())
-                System.out.println("Succeed!");
-
-
-            //获取时间与文件名哈希作为标识
-            SHA256hash foo = new SHA256hash();
-            String id = foo.getSHA(filename);
-
-            //插入标识与文件路径
-            String sql = "insert into DataId(id,path,permission) values(?,?,?)";
-            java.sql.PreparedStatement pstmt = null;
-            pstmt = conn.prepareStatement(sql);
-            pstmt.setString(1, id);
-            pstmt.setString(2, encryptDataPath +request.getFileName()+"/"+ filename);
-            pstmt.setString(3, request.getPolicy());
-
-            boolean row = pstmt.execute();
-            System.out.println(row);
-
-            //释放资源
-            pstmt.close();
-            conn.close();
-
-        }catch(Exception e) {
-            System.out.println("defeat!");
-            System.out.println(e);
-        }
+//        try {
+//            //加载驱动
+//            Class.forName(Driver);
+//
+//
+//            Connection conn = DriverManager.getConnection(mysqlUrl, mysqlUser, mysqlPassword);	//创建connection对象,用来连接数据库
+//            if(!conn.isClosed())
+//                System.out.println("Succeed!");
+//
+//
+//            //获取时间与文件名哈希作为标识
+//            SHA256hash foo = new SHA256hash();
+//            String id = foo.getSHA(filename);
+//
+//            //插入标识与文件路径
+//            String sql = "insert into DataId(id,path,permission) values(?,?,?)";
+//            java.sql.PreparedStatement pstmt = null;
+//            pstmt = conn.prepareStatement(sql);
+//            pstmt.setString(1, id);
+//            pstmt.setString(2, encryptDataPath +request.getFileName()+"/"+ filename);
+//            pstmt.setString(3, request.getPolicy());
+//
+//            boolean row = pstmt.execute();
+//            System.out.println(row);
+//
+//            //释放资源
+//            pstmt.close();
+//            conn.close();
+//
+//        }catch(Exception e) {
+//            System.out.println("defeat!");
+//            System.out.println(e);
+//        }
 
 
         //System.out.println("驱动无法加载不是因为connection refused");
@@ -482,7 +485,7 @@ public class ContentController {
     //上传门限文件
     @PostMapping("/thresholdUpload")
     public Result<Object> thresholdUpload( ThresholdFilesRequest request ) throws IOException {
-        System.out.println("11111111111111111111111111111");
+        System.out.println("门限上传文件");
         MultipartFile file = request.getFile();
         if(file.isEmpty()){
             return Result.internalError("file is empty");
@@ -496,7 +499,7 @@ public class ContentController {
         System.out.println(orgName);
         System.out.println("2222222222222222222222222222222");
         //根据相对路径获取绝对路径
-        File dest = new File(new File(encryptDataPath).getAbsolutePath()+ "/" + orgName+"/"+filename);
+        File dest = new File(new File(thresholdDataPath).getAbsolutePath()+ "/" + orgName+"/"+filename);
 
         System.out.println(dest.getPath());
         if (!dest.getParentFile().exists()) {
@@ -571,21 +574,54 @@ public class ContentController {
         //FileUtils.copyFile(dest,os);
         //return Result.success();
     }
-    //下载明文申请，如果私钥个数不够就不让下载
-    @GetMapping("/ThresholdDownload")
-    public void thresholdDownload(String userName , String orgName , String fileName ,HttpServletRequest request,HttpServletResponse response) throws IOException {
+
+
+    @GetMapping("/thresholdDecrypt")
+    public Result<String> thresholdDecrypt(String userName , String orgName , String fileName , HttpServletRequest request, HttpServletResponse response)throws IOException {
         //先判断文件够不够解密，不够解密就不返回并抛出异常门限不够
 
         orgRepositoryService.Thresholdmixdownload(orgName,userName,fileName);
 
-        File dest = new File(new File(thresholdDecDataPath).getAbsolutePath()+"/"+userName+"/"+orgName+"/"+fileName);
-        System.out.println(dest);
-        FileInputStream fis = new FileInputStream(dest);
-        response.setContentType("application/force-download");
-        response.setHeader("content-disposition","attachment;fileName="+ URLEncoder.encode(fileName,"UTF-8"));
-        ServletOutputStream os = response.getOutputStream();
-        FileCopyUtils.copy(fis,os);
+        return Result.okWithData(null);
     }
+
+    //下载解密后的原文
+    @GetMapping("/thresholdDownload")
+    public void thresholdDownload(String fileName, String orgName ,HttpServletRequest request, HttpServletResponse response) throws Exception {
+        //获取文件的绝对路径
+        File dest = new File(new File(thresholdDataPath).getAbsolutePath()+"/"+orgName+"/"+fileName);
+        //获取输入流对象（用于读文件）
+        FileInputStream fis = new FileInputStream(dest);
+        //动态设置响应类型，根据前台传递文件类型设置响应类型
+        //response.setContentType(request.getSession().getServletContext().getMimeType(extendFileName));
+        //response.setContentType("content-type:octet-stream");
+        response.setContentType("application/force-download");
+        //设置响应头,attachment表示以附件的形式下载，inline表示在线打开
+        response.setHeader("content-disposition","attachment;fileName="+ URLEncoder.encode(fileName,"UTF-8"));
+        //获取输出流对象（用于写文件）
+        ServletOutputStream os = response.getOutputStream();
+        //下载文件,使用spring框架中的FileCopyUtils工具
+        FileCopyUtils.copy(fis,os);
+        //FileUtils.copyFile(dest,os);
+        //return Result.success();
+    }
+
+//    //下载明文申请，如果私钥个数不够就不让下载
+//    @GetMapping("/ThresholdDownload")
+//    public Result<Object> thresholdDownload(String userName , String orgName , String fileName , HttpServletRequest request, HttpServletResponse response) throws IOException {
+//        //先判断文件够不够解密，不够解密就不返回并抛出异常门限不够
+//
+//        orgRepositoryService.Thresholdmixdownload(orgName,userName,fileName);
+//
+//        File dest = new File(new File(thresholdDataPath).getAbsolutePath()+"/"+orgName+"/"+fileName);
+//        System.out.println(dest);
+//        FileInputStream fis = new FileInputStream(dest);
+//        response.setContentType("application/force-download");
+//        response.setHeader("content-disposition","attachment;fileName="+ URLEncoder.encode(fileName,"UTF-8"));
+//        ServletOutputStream os = response.getOutputStream();
+//        FileCopyUtils.copy(fis,os);
+//        return Result.okWithData(null);
+//    }
 
     //撤销用户所有属性
     public void revokeUserAttr(String userName,String msg) {

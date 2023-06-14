@@ -257,6 +257,7 @@ public class ContentServiceImpl implements ContentService {
         System.out.println(request.getFileName());
         System.out.println(shareContentCCRequest.getFileName());
         System.out.println("ccccccccccccccccc");
+//        CCUtils.SM2sign(shareContentCCRequest,request.getFileName(),user.getName());
         ChaincodeResponse response = chaincodeService.invoke(
                 ChaincodeTypeEnum.TRUST_PLATFORM, "/common/shareThreholdMessage", shareContentCCRequest);
         if (response.isFailed()) {

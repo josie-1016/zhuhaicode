@@ -1,2 +1,3 @@
-/Users/vango/go/src/github.com/hyperledger/fabric/fabric-samples/chaincode/backend/src/test/java/com/weiyan/atp/utils/UUIDTest.java
-/Users/vango/go/src/github.com/hyperledger/fabric/fabric-samples/chaincode/backend/src/test/java/com/weiyan/atp/utils/SecurityUtilsTest.java
+/Users/tjy/区块链/珠海研究院/zhuhai/backend/src/test/java/com/weiyan/atp/service/impl/DABEServiceImplTest.java
+/Users/tjy/区块链/珠海研究院/zhuhai/backend/src/test/java/com/weiyan/atp/utils/UUIDTest.java
+/Users/tjy/区块链/珠海研究院/zhuhai/backend/src/test/java/com/weiyan/atp/utils/SecurityUtilsTest.java
